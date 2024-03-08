@@ -10,7 +10,6 @@ import argparse
 import sys
 import os
 cwd=os.getcwd()
-print(cwd,cwd+"/src")
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 
@@ -22,6 +21,17 @@ from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
 from pathlib import Path
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+import numpy as np
+
+def reshape_parameters(parameters,shapes):
+    p=[]
+    offset=0
+    for i,s in enumerate(shapes):
+        n = np.prod(s)
+        p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
+        offset+=n
+    return np.array(p,dtype=object)
+
 
 def fit_config(server_round: int):
     """Return training configuration dict for each round.
@@ -57,8 +67,35 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id):
         config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         # Update model with the latest parameters
+
         params_dict = zip(model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        model.load_state_dict(state_dict, strict=True)
+
+        accuracy, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
+        GNN_script.cprint(f"Server: Evaluation accuracy & loss, {accuracy}, {loss}",id)
+
+        return loss, {"accuracy": accuracy}
+
+    return evaluate
+
+def get_evaluate_enc_fn(model: torch.nn.Module, valset,id):
+    """Return an evaluation function for server-side evaluation."""
+
+    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
+    # valLoader = DataLoader(valset, batch_size=16, shuffle=False)
+
+    # The `evaluate` function will be called after every round
+    def evaluate(
+        server_round: int,
+        parameters: fl.common.NDArrays,
+        config: Dict[str, fl.common.Scalar],
+    ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
+        # Update model with the latest parameters
+
+        parameters = reshape_parameters(parameters,[x.cpu().numpy().shape for x in model.state_dict().values()])
+        params_dict = zip(model.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         model.load_state_dict(state_dict, strict=True)
 
         accuracy, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
@@ -117,17 +154,18 @@ if __name__ == "__main__":
 
     
     # FL strategy
-    strategy = fl.server.strategy.FedAvg(#fl.server.strategy.FedAvg(
+    strategy = fl.server.strategy.MKFedAvg(
         fraction_fit=0.2,  # Fraction of available clients used for training at each round
         min_fit_clients=2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
         min_available_clients=2,  # Minimum number of all available clients to be considered
-        evaluate_fn=get_evaluate_fn(model, test_dataset, id),  # Evaluation function used by the server without enc
+        evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id),  # Evaluation function used by the server 
         on_fit_config_fn=fit_config,  # Called before every round
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
 
     fl.server.start_server(
+        length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=nrounds),
         strategy=strategy,

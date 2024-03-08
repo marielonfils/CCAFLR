@@ -102,7 +102,7 @@ def main() -> None:
     batch_size = 32
     hidden = 64
     num_classes = len(families)
-    num_layers = 5
+    num_layers = 2#5
     drop_ratio = 0.5
     residual = False
     model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)

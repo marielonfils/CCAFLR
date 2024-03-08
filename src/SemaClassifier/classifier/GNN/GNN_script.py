@@ -46,7 +46,8 @@ import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/SVM")
-from SVM.SVMWLClassifier import SVMWLClassifier
+print(cwd, sys.path)
+from SemaClassifier.classifier.SVM.SVMWLClassifier import SVMWLClassifier
 
 from utils import gen_graph_data, read_gs_4_gnn, read_json_4_gnn, read_json_4_wl, read_mapping, read_mapping_inverse
 import copy
@@ -121,7 +122,7 @@ def split_dataset_indexes(dataset, label):
     y_train = []
     val_dataset = []
     y_val = []
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=0.4, random_state=54)
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=0.4, random_state=4)
     # import pdb; pdb.set_trace()
     for train, test in sss.split(dataset, label):
         train_index = train

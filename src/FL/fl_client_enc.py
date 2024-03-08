@@ -1,4 +1,9 @@
 from flwr.common import NDArrays, Scalar
+import sys
+import os
+cwd=os.getcwd()
+sys.path.insert(0, cwd)
+sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
 import flwr as fl
 import numpy as np
@@ -36,6 +41,8 @@ class GNNClient(fl.client.NumPyClient):
         self.parms = None
         self.n = None
         self.shape = None
+        self.shapes = None
+        self.length=None
 
         self.set_context(8192,[60,40,40,60],2**40,pk)
     
@@ -51,7 +58,10 @@ class GNNClient(fl.client.NumPyClient):
         self.context.global_scale = scale
         self.pk = self.context.public_key()
         self.shape = np.array(self.get_parameters(config={}),dtype=object).shape
-    
+        self.parms = np.hstack(np.array(self.get_parameters_flat(),dtype=object),dtype=object)
+        self.length = len(self.parms)
+        self.shapes = [x.shape for x in self.get_parameters(config={})]
+        
     def get_context(self):
         return self.context
     
@@ -66,6 +76,9 @@ class GNNClient(fl.client.NumPyClient):
     def set_parms(self,parms,n):
         self.parms = parms 
         self.n = n 
+    
+    def get_parms(self):
+        return self.parms
 
     def get_n(self):
         return self.n 
@@ -84,45 +97,49 @@ class GNNClient(fl.client.NumPyClient):
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
     
+    def get_parameters_flat(self, config: Dict[str, str]=None) -> List[np.ndarray]:
+        return [val.cpu().numpy().flatten() for _, val in self.model.state_dict().items()]
+    
     def get_parms_enc(self) -> List[np.ndarray]:
-        parms =  [val.cpu().numpy().flatten() for _, val in self.model.state_dict().items()]
-        for i in range(10):
-            print(parms[4][i], 4)
-            #print(parms[6][i], 6)
-            #print(parms[9][i], 9)
-            #print(parms[13][i], 13)
-            #print(parms[11][i], 11)
-            #print(parms[14][i], 14)
-        #parms2 = np.hstack(np.array([val.cpu().numpy().flatten() for _, val in self.model.state_dict().items()],dtype=object))
-        print("parms shape" , np.array(parms,dtype=object).shape, [x.shape for x in np.array(parms,dtype=object)])
-        #print("parms parameters", [i for i in self.model.parameters()])
-        #print("parms2 shape" , np.array(parms2,dtype=object).shape, [x.shape for x in np.array(parms2,dtype=object)])
+        parms =  self.get_parameters_flat(config={})
         parms_flat = np.hstack(np.array(parms,dtype=object))
-        print("parms_flat shape" , parms_flat.shape)#, [x.shape for x in parms_flat])
-        return self.context,self.encrypt(parms_flat) 
+        return self.context,self.encrypt(parms_flat)
+    
+    def get_lenght(self):
+        return self.length
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
         params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v/N) for k, v in params_dict})
+        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         self.model.load_state_dict(state_dict, strict=True)
 
+    def reshape_parameters(self,parameters):
+        p=[]
+        offset=0
+        for i,s in enumerate(self.shapes):
+            n = np.prod(s)
+            p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
+            offset+=n
+        return np.array(p,dtype=object)
+
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
-        print("set", len(parameters), [x.shape for x in parameters]       )
         if flat:
             parameters = np.array(parameters,dtype=object).reshape(self.shape)
         self.set_parameters(parameters, config["N"])
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        p = self.get_parameters(config={})
-        print("get", len(p), [x.shape for x in p])
         return self.get_parameters(config={}), len(self.trainset), loss
     
     
     
-    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str]) -> Tuple[List[np.ndarray], int, Dict]:
-        self.set_parameters(np.array(parameters,dtype=object).reshape(self.shape), config["N"])
+    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
+        if flat:
+            parameters = self.reshape_parameters(parameters)
+
+        self.set_parameters(parameters, config)
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        return self.get_parms_enc(), len(self.trainset), loss
+        p = self.get_parameters(config={})
+        return self.get_parameters(config={}), len(self.trainset), loss
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
@@ -130,6 +147,14 @@ class GNNClient(fl.client.NumPyClient):
         if N is None:
             N=1
         self.set_parameters(parameters,N)
+        accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
+        return float(loss), len(self.testset), {"accuracy": float(accuracy)}
+    
+    def evaluate_enc(self, parameters: List[np.ndarray]
+    ) -> Tuple[float, int, Dict]:
+        parameters = self.reshape_parameters(self.parms)
+        self.set_parameters(parameters,1)
         accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
@@ -176,7 +201,7 @@ def main() -> None:
     batch_size = 32
     hidden = 64
     num_classes = len(families)
-    num_layers = 5
+    num_layers = 2#5
     drop_ratio = 0.5
     residual = False
     model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
