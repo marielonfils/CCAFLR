@@ -105,6 +105,46 @@ def get_evaluate_enc_fn(model: torch.nn.Module, valset,id):
 
     return evaluate
 
+def get_aggregate_evaluate_enc_fn(model: torch.nn.Module, valset,id,metrics):
+    """Return an evaluation function for server-side evaluation."""
+
+    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
+    # valLoader = DataLoader(valset, batch_size=16, shuffle=False)
+
+    # The `evaluate` function will be called after every round
+    def aggregate_evaluate(
+        eval_metrics,
+        #server_round: int,
+        #parameters: fl.common.NDArrays,
+        #config: Dict[str, fl.common.Scalar],
+    ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
+        # Update model with the latest parameters
+
+        n_tot=0
+        agg = {m:0 for m in metrics}
+        #agg=[0 for _ in range(len(metrics))]
+        for r in eval_metrics:
+            n,m = r
+            n_tot+=n
+            for metric in metrics:
+                agg[metric]+=m[metric]*n
+        for metric in metrics:
+            agg[metric]/=n_tot
+        return agg
+
+
+        parameters = reshape_parameters(parameters,[x.cpu().numpy().shape for x in model.state_dict().values()])
+        params_dict = zip(model.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
+        model.load_state_dict(state_dict, strict=True)
+
+        accuracy, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
+        GNN_script.cprint(f"Server: Evaluation accuracy & loss, {accuracy}, {loss}",id)
+
+        return loss, {"accuracy": accuracy}
+
+    return aggregate_evaluate
+
 if __name__ == "__main__":
     #Parse command line argument `nclients`
     parser = argparse.ArgumentParser(description="Flower")    
@@ -159,6 +199,8 @@ if __name__ == "__main__":
         min_fit_clients=2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
         min_available_clients=2,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id),  # Evaluation function used by the server 
+        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy"]),
+        fit_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy"]),
         on_fit_config_fn=fit_config,  # Called before every round
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),

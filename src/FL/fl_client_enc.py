@@ -151,10 +151,11 @@ class GNNClient(fl.client.NumPyClient):
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
     
-    def evaluate_enc(self, parameters: List[np.ndarray]
+    def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
     ) -> Tuple[float, int, Dict]:
-        parameters = self.reshape_parameters(self.parms)
-        self.set_parameters(parameters,1)
+        if reshape:
+            parameters = self.reshape_parameters(parameters)
+            self.set_parameters(parameters,1)
         accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
