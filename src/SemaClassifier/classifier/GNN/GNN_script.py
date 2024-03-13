@@ -31,14 +31,9 @@ import progressbar
 import argparse
 
 
-# from ..Classifier import Classifier
-# from .GINClassifier import GIN
-# from .GINJKClassifier import GINJK
-# from .GCNClassifier import GCN
-# from .RGINClassifier import RanGIN
-# from .RGINJKClassifier import RanGINJK
-from GINJKFlagClassifier import GINJKFlag
-# from .GNNExplainability import GNNExplainability
+from GINEClassifier import GINE
+from GINJKClassifier import GINJK
+from GINMLPClassifier import GINMLP
 
 # import SVMClassifier from parent folder
 import sys

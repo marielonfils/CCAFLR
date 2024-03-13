@@ -17,6 +17,7 @@ from SemaClassifier.classifier.GNN import GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 from torch_geometric.loader import DataLoader
 from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.GINEClassifier import GINE
 
 from pathlib import Path
 
@@ -149,7 +150,8 @@ if __name__ == "__main__":
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
 
     
@@ -163,7 +165,8 @@ if __name__ == "__main__":
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
-
+    GNN_script.cprint(f"{np.hstack(np.array([val.cpu().numpy().shape for _, val in model.state_dict().items()],dtype=object),dtype=object)}", 7)
+    # import pdb; pdb.set_trace()
     fl.server.start_server(
         length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",

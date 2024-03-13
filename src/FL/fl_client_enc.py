@@ -5,6 +5,8 @@ cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.GINEClassifier import GINE
+
 import flwr as fl
 import numpy as np
 import torch
@@ -118,6 +120,7 @@ class GNNClient(fl.client.NumPyClient):
         p=[]
         offset=0
         for i,s in enumerate(self.shapes):
+            GNN_script.cprint(f"i : {i}, s: {s}", 7)
             n = np.prod(s)
             p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
             offset+=n
@@ -204,7 +207,8 @@ def main() -> None:
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     client = GNNClient(model, full_train_dataset, test_dataset,id)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
