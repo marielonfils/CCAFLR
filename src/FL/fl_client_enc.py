@@ -97,13 +97,15 @@ class GNNClient(fl.client.NumPyClient):
     def reshape_parameters(self,parameters):
         p=[]
         offset=0
-        for i,s in enumerate(self.shapes):
-            GNN_script.cprint(f"i : {i}, s: {s}", 7)
-            n = np.prod(s)
-            p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
+        for _,s in enumerate(self.shapes):
+            n = int(np.prod(s))
+            if not s:
+                p.append(np.array(parameters[offset],dtype=object))
+            else:
+                p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
             offset+=n
         return np.array(p,dtype=object)
-
+    
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)

@@ -27,9 +27,12 @@ import numpy as np
 def reshape_parameters(parameters,shapes):
     p=[]
     offset=0
-    for i,s in enumerate(shapes):
-        n = np.prod(s)
-        p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
+    for _,s in enumerate(shapes):
+        n = int(np.prod(s))
+        if not s:
+            p.append(np.array(parameters[offset],dtype=object))
+        else:
+            p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
         offset+=n
     return np.array(p,dtype=object)
 
@@ -93,7 +96,6 @@ def get_evaluate_enc_fn(model: torch.nn.Module, valset,id):
         config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         # Update model with the latest parameters
-
         parameters = reshape_parameters(parameters,[x.cpu().numpy().shape for x in model.state_dict().values()])
         params_dict = zip(model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
