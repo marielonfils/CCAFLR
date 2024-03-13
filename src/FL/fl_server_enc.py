@@ -131,18 +131,6 @@ def get_aggregate_evaluate_enc_fn(model: torch.nn.Module, valset,id,metrics):
         for metric in metrics:
             agg[metric]/=n_tot
         return agg
-
-
-        parameters = reshape_parameters(parameters,[x.cpu().numpy().shape for x in model.state_dict().values()])
-        params_dict = zip(model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
-        model.load_state_dict(state_dict, strict=True)
-
-        accuracy, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
-        GNN_script.cprint(f"Server: Evaluation accuracy & loss, {accuracy}, {loss}",id)
-
-        return loss, {"accuracy": accuracy}
-
     return aggregate_evaluate
 
 if __name__ == "__main__":
