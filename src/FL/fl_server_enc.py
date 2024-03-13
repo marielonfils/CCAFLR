@@ -26,9 +26,12 @@ import numpy as np
 def reshape_parameters(parameters,shapes):
     p=[]
     offset=0
-    for i,s in enumerate(shapes):
-        n = np.prod(s)
-        p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
+    for _,s in enumerate(shapes):
+        n = int(np.prod(s))
+        if not s:
+            p.append(np.array(parameters[offset],dtype=object))
+        else:
+            p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
         offset+=n
     return np.array(p,dtype=object)
 
