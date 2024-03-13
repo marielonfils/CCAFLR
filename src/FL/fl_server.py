@@ -21,6 +21,7 @@ from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
 from SemaClassifier.classifier.GNN.GINEClassifier import GINE
 
 from pathlib import Path
+import numpy as np
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -130,6 +131,7 @@ if __name__ == "__main__":
     )
 
     fl.server.start_server(
+        length = len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=nrounds),
         strategy=strategy,

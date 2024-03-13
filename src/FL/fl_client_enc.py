@@ -42,9 +42,7 @@ class GNNClient(fl.client.NumPyClient):
         self.pk = None
         self.parms = None
         self.n = None
-        self.shape = None
         self.shapes = None
-        self.length=None
 
         self.set_context(8192,[60,40,40,60],2**40,pk)
     
@@ -59,9 +57,6 @@ class GNNClient(fl.client.NumPyClient):
         self.context.make_context_public()
         self.context.global_scale = scale
         self.pk = self.context.public_key()
-        self.shape = np.array(self.get_parameters(config={}),dtype=object).shape
-        self.parms = np.hstack(np.array(self.get_parameters_flat(),dtype=object),dtype=object)
-        self.length = len(self.parms)
         self.shapes = [x.shape for x in self.get_parameters(config={})]
         
     def get_context(self):
@@ -75,26 +70,11 @@ class GNNClient(fl.client.NumPyClient):
         self.context.data.set_publickey(ts._ts_cpp.PublicKey(pk.data.ciphertext()[0]))
         self.pk = self.context.public_key()
     
-    def set_parms(self,parms,n):
-        self.parms = parms 
-        self.n = n 
-    
-    def get_parms(self):
-        return self.parms
-
-    def get_n(self):
-        return self.n 
-    
     def encrypt(self, plain_vector):
         return ts.ckks_vector(self.context,np.array(plain_vector,dtype=object).flatten())
     
     def get_decryption_share(self, encrypted_vector):
         return self.context,encrypted_vector.decryption_share(self.context,self._sk)  
-    
-    def decrypt(self, decryption_share):
-        if self.ds is None or self.parms is None:
-            raise ValueError("No decryption share available")
-        return self.parms.mk_decrypt([decryption_share]) #TODO check if list is necessary
 
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -106,9 +86,7 @@ class GNNClient(fl.client.NumPyClient):
         parms =  self.get_parameters_flat(config={})
         parms_flat = np.hstack(np.array(parms,dtype=object))
         return self.context,self.encrypt(parms_flat)
-    
-    def get_lenght(self):
-        return self.length
+
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -127,13 +105,9 @@ class GNNClient(fl.client.NumPyClient):
         return np.array(p,dtype=object)
 
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
-        if flat:
-            parameters = np.array(parameters,dtype=object).reshape(self.shape)
         self.set_parameters(parameters, config["N"])
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        return self.get_parameters(config={}), len(self.trainset), loss
-    
-    
+        return self.get_parameters(config={}), len(self.trainset), loss    
     
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
         if flat:
@@ -154,10 +128,11 @@ class GNNClient(fl.client.NumPyClient):
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
     
-    def evaluate_enc(self, parameters: List[np.ndarray]
+    def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
     ) -> Tuple[float, int, Dict]:
-        parameters = self.reshape_parameters(self.parms)
-        self.set_parameters(parameters,1)
+        if reshape:
+            parameters = self.reshape_parameters(parameters)
+            self.set_parameters(parameters,1)
         accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
