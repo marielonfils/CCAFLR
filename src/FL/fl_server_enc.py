@@ -16,9 +16,13 @@ sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN import GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 from torch_geometric.loader import DataLoader
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 
 from pathlib import Path
+
+import SemaClassifier.classifier.GNN.gnn_main_script as main_script
+import json
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 import numpy as np
@@ -95,7 +99,6 @@ def get_evaluate_enc_fn(model: torch.nn.Module, valset,id):
         config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         # Update model with the latest parameters
-
         parameters = reshape_parameters(parameters,[x.cpu().numpy().shape for x in model.state_dict().values()])
         params_dict = zip(model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
@@ -163,13 +166,22 @@ if __name__ == "__main__":
     nrounds = args.nrounds
     
     #Dataset loading
-    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    # families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    # mapping = read_mapping("./mapping.txt")
+    # reversed_mapping = read_mapping_inverse("./mapping.txt")
+    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
+    # print(f"GNN Dataset length: {len(dataset)}")
+    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
+    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
+    # GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+
+
+    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
     mapping = read_mapping("./mapping.txt")
     reversed_mapping = read_mapping_inverse("./mapping.txt")
-    dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    print(f"GNN Dataset length: {len(dataset)}")
-    train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
+    # families = ['benjamin', 'berbew', 'ceeinject', 'dinwod', 'ganelp', 'gepys', 'mira', 'sfone', 'sillyp2p', 'small', 'upatre', 'wabot', 'wacatac'] # merge1 - family classification
+    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
 
 
@@ -180,7 +192,8 @@ if __name__ == "__main__":
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
 
     
@@ -196,7 +209,8 @@ if __name__ == "__main__":
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
-
+    GNN_script.cprint(f"{np.hstack(np.array([val.cpu().numpy().shape for _, val in model.state_dict().items()],dtype=object),dtype=object)}", 7)
+    # import pdb; pdb.set_trace()
     fl.server.start_server(
         length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",

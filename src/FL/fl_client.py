@@ -9,7 +9,9 @@ sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
+
 import flwr as fl
 import numpy as np
 import torch
@@ -106,6 +108,7 @@ def main() -> None:
     drop_ratio = 0.5
     residual = False
     model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     client = GNNClient(model, full_train_dataset, test_dataset,id)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())

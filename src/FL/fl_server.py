@@ -17,7 +17,8 @@ sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN import GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 from torch_geometric.loader import DataLoader
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 
 from pathlib import Path
 import numpy as np
@@ -113,7 +114,8 @@ if __name__ == "__main__":
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
 
     

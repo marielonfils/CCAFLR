@@ -4,7 +4,9 @@ import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
+
 import flwr as fl
 import numpy as np
 import torch
@@ -13,6 +15,10 @@ import argparse
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 
+import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
+import  SemaClassifier.classifier.GNN.gnn_helpers.models_training as models_training
+import  SemaClassifier.classifier.GNN.gnn_helpers.models_tuning as models_tuning
+
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 
@@ -20,6 +26,9 @@ from pathlib import Path
 import sys
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
+
+import SemaClassifier.classifier.GNN.gnn_main_script as main_script
+import json
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
@@ -103,7 +112,7 @@ class GNNClient(fl.client.NumPyClient):
                 p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
             offset+=n
         return np.array(p,dtype=object)
-
+    
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
@@ -166,14 +175,24 @@ def main() -> None:
 
 
     #Dataset Loading
-    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    # families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    # mapping = read_mapping("./mapping.txt")
+    # reversed_mapping = read_mapping_inverse("./mapping.txt")
+    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
+    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
+    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset)
+    # GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+
+    
+    # ds_path = "./databases/classification" # classification task
+    # ds_path = "./databases/detection" # detection task
+    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
     mapping = read_mapping("./mapping.txt")
     reversed_mapping = read_mapping_inverse("./mapping.txt")
-    dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset)
+    # families = ['benjamin', 'berbew', 'ceeinject', 'dinwod', 'ganelp', 'gepys', 'mira', 'sfone', 'sillyp2p', 'small', 'upatre', 'wabot', 'wacatac'] # merge1 - family classification
+    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
-
 
     #Model
     batch_size = 32
@@ -182,7 +201,8 @@ def main() -> None:
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    # model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     client = GNNClient(model, full_train_dataset, test_dataset,id)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
