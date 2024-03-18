@@ -9,8 +9,8 @@ sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
-from SemaClassifier.classifier.GNN.GINEClassifier import GINE
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 
 import flwr as fl
 import numpy as np

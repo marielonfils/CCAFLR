@@ -17,8 +17,8 @@ sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN import GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 from torch_geometric.loader import DataLoader
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
-from SemaClassifier.classifier.GNN.GINEClassifier import GINE
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 
 from pathlib import Path
 import numpy as np

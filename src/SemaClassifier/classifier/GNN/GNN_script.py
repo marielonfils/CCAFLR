@@ -31,9 +31,9 @@ import progressbar
 import argparse
 
 
-from GINEClassifier import GINE
-from GINJKClassifier import GINJK
-from GINMLPClassifier import GINMLP
+from models.GINEClassifier import GINE
+from models.GINJKClassifier import GINJK
+from models.GINMLPClassifier import GINMLP
 
 # import SVMClassifier from parent folder
 import sys
@@ -145,7 +145,7 @@ def load_partition(n_clients,id,train_idx,test_idx,dataset,client=True,wl=False,
         train_partition = train_idx[(id-1)*n_train: id*n_train]
     else:
         train_partition = train_idx[id * n_train: (id + 1) * n_train]
-    test_partition = test_idx[id * n_test: (id + 1) * n_test]    
+    test_partition = test_idx[id * n_test: (id + 1) * n_test]
     full_train_dataset, y_full_train, test_dataset, y_test = [], [], [], []
     for i in train_partition:
         full_train_dataset.append(dataset[i])
