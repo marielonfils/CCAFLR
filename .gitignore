@@ -8,6 +8,7 @@ __pycache__/
 
 # GS extension
 *.gs
+*.json
 
 # Distribution / packaging
 .Python

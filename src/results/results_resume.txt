@@ -1,0 +1,72 @@
+#SERVER
+
+python FL/fl_server.py --nclients=2 --nrounds=2
+GNN Dataset length: 1507
+ client 2 : n_train 452, start 904, end 1356, client False, wl False
+ client 2 : n_test 201, start 402, end 603, client False, wl False
+ Client 2 : datasets length, 0, 201
+
+ --------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.13930348258706468, 1236.007713507657
+--------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.31840796019900497, 43.39596070341803
+INFO flwr 2024-03-06 09:28:58,554 | server.py:126 | fit progress: (1, 43.39596070341803, {'accuracy': 0.31840796019900497}, 136.75397830500015)
+ --------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.6069651741293532, 20.39285808771997
+INFO flwr 2024-03-06 09:30:42,756 | server.py:126 | fit progress: (2, 20.39285808771997, {'accuracy': 0.6069651741293532}, 240.9553185929999)
+INFO flwr 2024-03-06 09:30:44,218 | server.py:154 | FL finished in 242.41742687899978
+INFO flwr 2024-03-06 09:30:44,218 | app.py:226 | app_fit: losses_distributed [(1, 48.03895950317383), (2, 24.983704566955566)]
+INFO flwr 2024-03-06 09:30:44,218 | app.py:229 | app_fit: losses_centralized [(0, 1236.007713507657), (1, 43.39596070341803), (2, 20.39285808771997)]
+INFO flwr 2024-03-06 09:30:44,218 | app.py:230 | app_fit: metrics_centralized {'accuracy': [(0, 0.13930348258706468), (1, 0.31840796019900497), (2, 0.6069651741293532)]}
+
+#CLIENT 0
+
+python FL/fl_client.py --nclients=2 --partition=0
+ client 0 : n_train 452, start 0, end 452, client True, wl False
+ client 0 : n_test 201, start 0, end 201, client True, wl False
+ Client 0 : datasets length, 452, 201
+
+ Client 0: Epoch 0, Loss: 403.2062278004874
+ Client 0: Epoch 1, Loss: 87.833783217236
+ Client 0: Epoch 2, Loss: 81.08049429834416
+ Client 0: Epoch 3, Loss: 43.545726033438626
+ Client 0: Epoch 4, Loss: 57.77288602305725
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 0: Evaluation accuracy & loss, 0.31840796019900497, 46.335240947666456
+
+ Client 0: Epoch 0, Loss: 152.68902132152456
+ Client 0: Epoch 1, Loss: 29.94130098292258
+ Client 0: Epoch 2, Loss: 38.78701900380903
+ Client 0: Epoch 3, Loss: 20.6424716341812
+ Client 0: Epoch 4, Loss: 20.142263197265894
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 0: Evaluation accuracy & loss, 0.5920398009950248, 24.87377938227867
+
+
+#CLIENT 1
+
+python FL/fl_client.py --nclients=2 --partition=1
+ client 1 : n_train 452, start 452, end 904, client True, wl False
+ client 1 : n_test 201, start 201, end 402, client True, wl False
+ Client 1 : datasets length, 452, 201
+
+ Client 1: Epoch 0, Loss: 364.30476879018596
+ Client 1: Epoch 1, Loss: 85.15056370422903
+ Client 1: Epoch 2, Loss: 63.38242417732171
+ Client 1: Epoch 3, Loss: 45.09351684772863
+ Client 1: Epoch 4, Loss: 29.67375480179238
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 1: Evaluation accuracy & loss, 0.26865671641791045, 49.742678855782124
+
+ Client 1: Epoch 0, Loss: 120.42568017740166
+ Client 1: Epoch 1, Loss: 36.355080646751205
+ Client 1: Epoch 2, Loss: 46.01762873303136
+ Client 1: Epoch 3, Loss: 32.19163091203808
+ Client 1: Epoch 4, Loss: 28.30733523748617
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 1: Evaluation accuracy & loss, 0.6119402985074627, 25.093629258189036
+D
