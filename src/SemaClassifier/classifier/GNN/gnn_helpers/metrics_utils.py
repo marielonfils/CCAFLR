@@ -36,7 +36,50 @@ def plot_confusion_matrix(y_true, y_pred, fam_idx, model_name):
     plt.title(f"Confusion matrix for {model_name}")
     plt.savefig(f"confusion_matrix_{model_name}.png")
     # plt.show()
+
+def write_model(filename, model):
+    if not os.path.isfile(filename):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename,"w+") as f:
+        for v in model:
+            f.write(f"{v}: {model[v]}\n")
+
+def write_to_csv(results, file):
+    # Write stats and params in csv file
+    p = file
+    if not os.path.isfile(p):
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+        with open(p, "w") as f:
+            f.write("model,Accuracy,Precision,Recall,F1 score,Balanced Accuracy,Loss,Train time,Test time\n")
     
+    with open(p, "a") as f:
+        f.write(f"{results[0]},{results[1]},{results[2]},{results[3]},{results[4]},{results[5]},{results[6]},{results[7]},{results[8]}\n")
+def write_history_to_csv(hist,model, nrounds, file):
+    if not os.path.isfile(file):
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+        with open(file, "w") as f:
+            t="model,metric"
+            for r in range(nrounds+1):
+                t+=f",round{r}"
+            f.write(t+"\n")
+    with open(file,"a") as f:
+        for m in hist.metrics_distributed_fit:
+            t=f"{model.__class__.__name__},{m}_df, 0.0,"
+            for v in hist.metrics_distributed_fit[m]:
+                t+=f"{v[1]},"
+            f.write(t+"\n")
+        for m in hist.metrics_distributed:
+            t=f"{model.__class__.__name__},{m}_d,"
+            for v in hist.metrics_distributed[m]:
+                t+=f"{v[1]},"
+            f.write(t+"\n")
+        for m in hist.metrics_centralized:
+            t=f"{model.__class__.__name__},{m}_c,"
+            for v in hist.metrics_centralized[m]:
+                t+=f"{v[1]},"
+            f.write(t+"\n")
+    
+
 def write_stats_to_csv(results, clf_model):
     # Write stats and params in csv file
     if not os.path.isfile(f"vec_stats_cv_{clf_model}.csv"):

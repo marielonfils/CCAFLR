@@ -23,6 +23,10 @@ from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 from pathlib import Path
 import numpy as np
 
+import SemaClassifier.classifier.GNN.gnn_main_script as main_script
+import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
+import time
+
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def fit_config(server_round: int):
@@ -46,7 +50,7 @@ def evaluate_config(server_round: int):
     val_steps = 5 if server_round < 4 else 10
     return {"val_steps": val_steps}
 
-def get_evaluate_fn(model: torch.nn.Module, valset,id):
+def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
@@ -60,17 +64,47 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id):
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         # Update model with the latest parameters
         params_dict = zip(model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         model.load_state_dict(state_dict, strict=True)
 
-        accuracy, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
-        GNN_script.cprint(f"Server: Evaluation accuracy & loss, {accuracy}, {loss}",id)
-
-        return loss, {"accuracy": accuracy}
+        test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
+        acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
+        #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
+        GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
+        
+        return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0}
 
     return evaluate
 
-if __name__ == "__main__":
+def get_aggregate_evaluate_fn(model: torch.nn.Module, valset,id,metrics):
+    """Return an evaluation function for server-side evaluation."""
+
+    # Load data and model here to avoid the overhead of doing it in `evaluate` itself
+    # valLoader = DataLoader(valset, batch_size=16, shuffle=False)
+
+    # The `evaluate` function will be called after every round
+    def aggregate_evaluate(
+        eval_metrics,
+        #server_round: int,
+        #parameters: fl.common.NDArrays,
+        #config: Dict[str, fl.common.Scalar],
+    ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
+        # Update model with the latest parameters
+        metrics = eval_metrics[0][1].keys()
+        n_tot=0
+        agg = {m:0 for m in metrics}
+        #agg=[0 for _ in range(len(metrics))]
+        for r in eval_metrics:
+            n,m = r
+            n_tot+=n
+            for metric in metrics:
+                agg[metric]+=m[metric]*n
+        for metric in metrics:
+            agg[metric]/=n_tot
+        return agg
+    return aggregate_evaluate
+
+def main():
     #Parse command line argument `nclients`
     parser = argparse.ArgumentParser(description="Flower")    
     parser.add_argument(
@@ -91,19 +125,41 @@ if __name__ == "__main__":
         help="Specifies the number of rounds of FL. \
         Picks partition 3 by default",
     )
+    parser.add_argument(
+        "--filepath",
+        type=str,
+        required=False,
+        help="Specifies the path for storing results"
+    )
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
+    filename = args.filepath
+    if filename is not None:
+        timestr1 = time.strftime("%Y%m%d-%H%M%S")
+        timestr2 = time.strftime("%Y%m%d-%H%M")
+        filename1 = f"{filename}/{timestr2}_wo/model.txt"
+        filename = f"{filename}/{timestr2}_wo/server{id}_{timestr1}.csv"
+    print("FFFNNN",filename)
+
+    
     
     #Dataset loading
     families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-    mapping = read_mapping("./mapping.txt")
-    reversed_mapping = read_mapping_inverse("./mapping.txt")
-    dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    print(f"GNN Dataset length: {len(dataset)}")
-    train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
+    #families = ["benjamin","berbew","ceeinject","dinwod","ganelp","gepys","mira","sfone","sillyp2p","small","upatre","wabot","wacatac"]
+    mapping = read_mapping("./mapping.txt")#read_mapping("./mapping.txt") or mapping_scdg1.txt
+    reversed_mapping = read_mapping_inverse("./mapping.txt")#read_mapping_inverse("./mapping.txt")
+    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
+    # print(f"GNN Dataset length: {len(dataset)}")
+    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
+    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
+
+    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
+    #ds_path = "./databases/scdg1"
+    #ds_path = "./databases/classification" # classification task
+    #ds_path = "./databases/detection" # detection task
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
 
 
@@ -117,20 +173,23 @@ if __name__ == "__main__":
     # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
-
+    metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
+    
     
     # FL strategy
     strategy = fl.server.strategy.FedAvg(#fl.server.strategy.FedAvg(
         fraction_fit=0.2,  # Fraction of available clients used for training at each round
-        min_fit_clients=2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
-        min_available_clients=2,  # Minimum number of all available clients to be considered
-        evaluate_fn=get_evaluate_fn(model, test_dataset, id),  # Evaluation function used by the server without enc
+        min_fit_clients=n_clients,  # Minimum number of clients used for training at each round (override `fraction_fit`)
+        min_available_clients=n_clients,  # Minimum number of all available clients to be considered
+        evaluate_fn=get_evaluate_fn(model, test_dataset, id,y_test),  # Evaluation function used by the server without enc
+        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
+        fit_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
         on_fit_config_fn=fit_config,  # Called before every round
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
 
-    fl.server.start_server(
+    hist=fl.server.start_server(
         length = len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=nrounds),
@@ -142,3 +201,8 @@ if __name__ == "__main__":
     )
 
     )
+    metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
+    return filename
+
+if __name__ == "__main__":
+    main()    

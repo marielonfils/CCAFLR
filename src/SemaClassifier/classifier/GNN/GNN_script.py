@@ -30,6 +30,7 @@ import progressbar
 
 import argparse
 
+import time
 
 from models.GINEClassifier import GINE
 from models.GINJKClassifier import GINJK
@@ -177,6 +178,7 @@ def one_epoch_train(model, train_loader, device, optimizer, criterion):
     return loss_all / len(train_loader.dataset)
 
 def train(model, train_dataset, batch_size, epochs, device, id):
+    t1=time.time()
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
@@ -184,32 +186,41 @@ def train(model, train_dataset, batch_size, epochs, device, id):
                               T_max = 42, # Maximum number of iterations.
                              eta_min = 1e-4) # Minimum learning rate.
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    t=time.time()-t1
     for epoch in range(epochs):
+        t2=time.time()
         loss = one_epoch_train(model, train_loader, device, optimizer, criterion)
         scheduler.step()
+        t+=time.time()-t2
         cprint(f"Client {id}: Epoch {epoch}, Loss: {loss}",id)
     cprint('--------------------FIT OK----------------',id)
     
-    return model, {'loss': loss}
+    return model, {'loss': loss,"train_time":t}
 
 def test(model, test_dataset, batch_size, device,id):
+    t0=time.time()
     model.eval()
     correct, loss_all = 0, 0.0
     criterion = torch.nn.CrossEntropyLoss()
     y_pred = []
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    t=time.time()-t0
     with torch.no_grad():
         for data in test_loader:
+            t1=time.time()
             data = data.to(device)
             output = model(data.x, data.edge_index, data.edge_attr, data.batch)
             loss = criterion(output, data.y).item()
             loss_all += loss * data.num_graphs
             pred = output.argmax(dim=1)
-            correct += pred.eq(data.y).sum().item()
+            t2=time.time()
+            t+=t2-t1
+            #correct += pred.eq(data.y).sum().item()
             for p in pred:
                 y_pred.append(p.item())
     cprint('--------------------TEST OK----------------',id)
-    return correct / len(test_loader.dataset), loss_all/len(test_loader.dataset), y_pred
+    #return correct / len(test_loader.dataset), loss_all/len(test_loader.dataset), y_pred
+    return t, loss_all/len(test_loader.dataset), y_pred
 
 
 def main(n_clients):

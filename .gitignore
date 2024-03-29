@@ -10,6 +10,10 @@ __pycache__/
 *.gs
 *.json
 
+#results
+*.csv
+src/results/*
+
 # Distribution / packaging
 .Python
 build/
