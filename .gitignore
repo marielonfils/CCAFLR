@@ -13,6 +13,7 @@ __pycache__/
 #results
 *.csv
 src/results/*
+!src/results/plot_results.py
 
 # Distribution / packaging
 .Python
