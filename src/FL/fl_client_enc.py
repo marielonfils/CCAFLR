@@ -55,7 +55,7 @@ class GNNClient(fl.client.NumPyClient):
         self.filename = filename
         self.train_time = 0
 
-        self.set_context(8192,[60,40,40,60],2**40,pk)
+        self.set_context(16384,[60,39,39,39,39,39,39,39,39,60],2**40,pk)
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
 
