@@ -72,7 +72,7 @@ class GNNClient(fl.client.NumPyClient):
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
-        self.set_parameters(parameters)
+        #self.set_parameters(parameters)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time], self.filename)

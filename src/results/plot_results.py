@@ -129,8 +129,8 @@ folders = ["./results/20240320-1433","./results/20240320-1440","./results/202403
 xps=[]
 for i in range(ni,nf,step):
     xps.append(read_xp(xp_path,i,reverse))
-xp=read_xp("./results/xp.txt",1)
-print(xp)
+#xp=read_xp("./results/xp.txt",1)
+#print(xp)
 #clients_results=read_client_results([file for file in glob.glob(os.path.join("./results/20240320-1440","client*.csv"))])
 #plot_metric_client(clients_results,"Accuracy")#,"./results/plot/c_acc.png")
 
