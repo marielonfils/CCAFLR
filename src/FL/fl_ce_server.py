@@ -4,7 +4,7 @@ import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
-from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
 import flwr as fl
 import numpy as np
 import torch

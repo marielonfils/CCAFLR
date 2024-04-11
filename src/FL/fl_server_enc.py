@@ -212,7 +212,8 @@ def main():
     # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
-    metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
+    if filename is not None:
+        metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
 
     
     # FL strategy
@@ -243,8 +244,9 @@ def main():
         Path("./FL/.cache/certificates/server.key").read_bytes(),
     )
     )
-    metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
-    return filename
+    if filename is not None:
+        metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
+    return
 
 if __name__ == "__main__":
     main()
