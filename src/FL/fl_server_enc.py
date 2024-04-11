@@ -11,6 +11,7 @@ import sys
 import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
+from FL.CE_client_manager import CEClientManager
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 
 from SemaClassifier.classifier.GNN import GNN_script
@@ -226,12 +227,16 @@ def main():
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
+
+    client_manager = CEClientManager()
+    
     # import pdb; pdb.set_trace()
     hist=fl.server.start_server(
         length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=nrounds),
         strategy=strategy,
+        client_manager=client_manager,
         certificates=(
         Path("./FL/.cache/certificates/ca.crt").read_bytes(),
         Path("./FL/.cache/certificates/server.pem").read_bytes(),
