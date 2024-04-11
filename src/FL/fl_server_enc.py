@@ -11,13 +11,13 @@ import sys
 import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
+from FL.CE_client_manager import CEClientManager
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 
 from SemaClassifier.classifier.GNN import GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 from torch_geometric.loader import DataLoader
 from SemaClassifier.classifier.GNN.GINJKFlagClassifier import GINJKFlag
-
 from pathlib import Path
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -187,8 +187,8 @@ if __name__ == "__main__":
     # FL strategy
     strategy = fl.server.strategy.MKFedAvg(
         fraction_fit=0.2,  # Fraction of available clients used for training at each round
-        min_fit_clients=2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
-        min_available_clients=2,  # Minimum number of all available clients to be considered
+        min_fit_clients=n_clients,  # Minimum number of clients used for training at each round (override `fraction_fit`)
+        min_available_clients=n_clients,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id),  # Evaluation function used by the server 
         evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy"]),
         fit_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy"]),
@@ -197,11 +197,14 @@ if __name__ == "__main__":
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
 
+    client_manager = CEClientManager()
+    
     fl.server.start_server(
         length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
         server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=nrounds),
         strategy=strategy,
+        client_manager=client_manager,
         certificates=(
         Path("./FL/.cache/certificates/ca.crt").read_bytes(),
         Path("./FL/.cache/certificates/server.pem").read_bytes(),

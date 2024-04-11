@@ -9,6 +9,7 @@ import flwr as fl
 import numpy as np
 import torch
 import argparse
+import copy
 
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
@@ -41,7 +42,8 @@ class GNNClient(fl.client.NumPyClient):
         self.parms = None
         self.n = None
         self.shapes = None
-
+        self.global_model = model
+        
         self.set_context(8192,[60,40,40,60],2**40,pk)
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
@@ -85,6 +87,12 @@ class GNNClient(fl.client.NumPyClient):
         parms_flat = np.hstack(np.array(parms,dtype=object))
         return self.context,self.encrypt(parms_flat)
 
+    def get_gradients(self) -> List[np.ndarray]:
+        print("##########   COMPUTING GRADIENT  #################")
+        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
+        return gradient
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -112,8 +120,8 @@ class GNNClient(fl.client.NumPyClient):
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
         if flat:
             parameters = self.reshape_parameters(parameters)
-
         self.set_parameters(parameters, config)
+        self.global_model = copy.deepcopy(self.model)
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         p = self.get_parameters(config={})
         return self.get_parameters(config={}), len(self.trainset), loss
