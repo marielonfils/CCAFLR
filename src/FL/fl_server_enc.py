@@ -172,11 +172,19 @@ def main():
         required=False,
         help="Specifies the path for storing results"
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=False,
+        help="Specifies the path for te dataset"
+    )
+    
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
     filename = args.filepath
+    dataset_name = args.dataset
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -184,20 +192,18 @@ def main():
         filename = f"{filename}/{timestr2}/server{id}_{timestr1}.csv"
     print("FFFNNN",filename)
     
-    #Dataset loading
-    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-    #families = ["benjamin","berbew","ceeinject","dinwod","ganelp","gepys","mira","sfone","sillyp2p","small","upatre","wabot","wacatac"]
-    mapping = read_mapping("./mapping.txt")#read_mapping("./mapping.txt") or mapping_scdg1.txt
-    reversed_mapping = read_mapping_inverse("./mapping.txt")#read_mapping_inverse("./mapping.txt")
-    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    # print(f"GNN Dataset length: {len(dataset)}")
-    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
-
-    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
-    #ds_path = "./databases/scdg1"
-    #ds_path = "./databases/classification" # classification task
-    #ds_path = "./databases/detection" # detection task
+    #Dataset Loading
+    if dataset_name == "scdg1":
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
+        mapping = read_mapping("./mapping_scdg1.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")#read_mapping_inverse("./mapping.txt")
+    else:
+        ds_path = "./databases/examples_samy/BODMAS/01"
+        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+        mapping = read_mapping("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping.txt")
+        
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
 

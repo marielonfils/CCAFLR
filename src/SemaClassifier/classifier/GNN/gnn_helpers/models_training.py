@@ -21,7 +21,6 @@ import seaborn as sns
 from gnn_helpers.metrics_utils import *
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {DEVICE}")
 
 BATCH_SIZE_TEST=32
 

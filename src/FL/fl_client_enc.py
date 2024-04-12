@@ -163,7 +163,7 @@ class GNNClient(fl.client.NumPyClient):
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time], self.filename)
-        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
+        GNN_script.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
     
     
@@ -196,11 +196,18 @@ def main() -> None:
         required=False,
         help="Specifies the path for storing results"
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=False,
+        help="Specifies the path for te dataset"
+    )
 
     args = parser.parse_args()
     n_clients = args.nclients
     id = args.partition
     filename = args.filepath
+    dataset_name = args.dataset
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -209,19 +216,18 @@ def main() -> None:
 
 
     #Dataset Loading
-    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
-    #ds_path = "./databases/scdg1"
-    #ds_path = "./databases/classification" # classification task
-    # ds_path = "./databases/detection" # detection task
-    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset)
-    families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-    #families = ["benjamin","berbew","ceeinject","dinwod","ganelp","gepys","mira","sfone","sillyp2p","small","upatre","wabot","wacatac"]
-    mapping = read_mapping("./mapping.txt")#read_mapping("./mapping.txt") or mapping_scdg1
-    reversed_mapping = read_mapping_inverse("./mapping.txt")#read_mapping_inverse("./mapping.txt")
+    if dataset_name == "scdg1":
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
+        mapping = read_mapping("./mapping_scdg1.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")#read_mapping_inverse("./mapping.txt")
+    else:
+        ds_path = "./databases/examples_samy/BODMAS/01"
+        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+        mapping = read_mapping("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping.txt")
+        
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
-   
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
@@ -232,7 +238,7 @@ def main() -> None:
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    # model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")

@@ -16,7 +16,6 @@ from gnn_helpers.models_training import *
 from torch_geometric.loader import DataLoader
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {DEVICE}")
 
 BATCH_SIZE_TEST=32
 

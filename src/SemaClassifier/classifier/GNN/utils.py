@@ -63,17 +63,23 @@ def read_json_4_wl(path, mapping, lonely=True):
     with open(path) as f:
         data = json.load(f)
         for node in data['nodes']:
-            v = int(node['id'])#int(node['id/index'])
+            if "id" in node:
+                v = int(node['id'])
+            else:
+                v = int(node['index'])
             vertices[v] = []
             v_label = node['name'] # TODO use mapping instead of name
-            # import pdb; pdb.set_trace()
-            # nodes[v] = v_label
             nodes[v] = mapping[v_label] 
         for link in data['links']:
-            v1 = int(link["id1"])#int(link["id1"/0])
-            v2 = int(link["id2"])#int(link["id2"/1])
+            if "id1" in link:
+                v1 = int(link["id1"])
+                v2 = int(link["id2"])
+                edge_labels[tuple((v1,v2))] = int(link["label"])
+            else:
+                v1 = int(link[0])
+                v2 = int(link[1])
+                edge_labels[tuple((v1,v2))] = int(link[2])
             edges[tuple((v1,v2))] = 1
-            edge_labels[tuple((v1,v2))] = int(link["label"])#int(link["label"/2])
             c_edges = c_edges + 1
             vertices[v1].append(v2)
             vertices[v2].append(v1)
@@ -127,17 +133,24 @@ def read_json_4_gnn(path, mapping, lonely=True):
     with open(path) as f:
         data = json.load(f)
         for node in data['nodes']:
-            v = int(node['id'])#int(node['id/index'])
+            if "id" in node:
+                v = int(node['id'])
+            else:
+                v = int(node['index'])
+            vertices[v] = []
             vertices[v] = []
             v_label = node['name'] # TODO use mapping instead of name
-            # import pdb; pdb.set_trace()
-            #nodes[v] = v_label
             nodes[v] = mapping[v_label] 
         for link in data['links']:
-            v1 = int(link["id1"])#int(link["id1"/0])
-            v2 = int(link["id2"])#int(link["id2"/1])
+            if "id1" in link:
+                v1 = int(link["id1"])
+                v2 = int(link["id2"])
+                edge_labels[tuple((v1,v2))] = int(link["label"])
+            else:
+                v1 = int(link[0])
+                v2 = int(link[1])
+                edge_labels[tuple((v1,v2))] = int(link[2])
             edges[tuple((v1,v2))] = 1
-            edge_labels[tuple((v1,v2))] = int(link["label"])#int(link["label"/2])
             c_edges = c_edges + 1
             vertices[v1].append(v2)
             vertices[v2].append(v1)
