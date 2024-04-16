@@ -17,16 +17,16 @@ from gnn_helpers.utils import gen_graph_data, read_gs_4_gnn, read_mapping, read_
 def init_dataset(path, families, mapping, fam_idx, fam_dict, BINARY_CLASS):
     if path[-1] != "/":
         path += "/"
-    print("Path: " + path)
-    bar = progressbar.ProgressBar() #progressbar.ProgressBar(max_value=len(families))
-    bar.start()
+    #print("Path: " + path)
+    #bar = progressbar.ProgressBar() #progressbar.ProgressBar(max_value=len(families))
+    #bar.start()
     original_path = path
     dataset = []
     dataset_wl = []
     label = []
     for family in families:
         path = original_path + family + '/'
-        print("Subpath: " + f"{path}")
+        #print("Subpath: " + f"{path}")
         if not os.path.isdir(path) :
             print("Dataset should be a folder containing malware classify by familly in subfolder")
             print("Path with error: " + path)
@@ -62,7 +62,7 @@ def init_dataset(path, families, mapping, fam_idx, fam_dict, BINARY_CLASS):
                         if len(nodes) > 1:
                             label.append(family)
     # import pdb; pdb.set_trace()
-    bar.finish()
+    #bar.finish()
     return dataset, label, fam_idx, fam_dict #, dataset_wl
 
 def temporal_init_dataset(path, families, mapping, fam_idx, fam_dict, BINARY_CLASS, name_map):

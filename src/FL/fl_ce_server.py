@@ -5,6 +5,7 @@ cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 import flwr as fl
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ import argparse
 import copy
 
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
+import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 
 from collections import OrderedDict
@@ -56,7 +58,7 @@ class CEServer(fl.client.NumPyClient):
         gradient_sum = self.gradients[S[0]]
         for i in range(1,l):
             gradient_sum = [gradient_sum[j] + self.gradients[S[i]][j] for j in range(len(gradient_sum))]
-        gradient_sum = [[y/l for y in x] for x in gradient_sum]
+        gradient_sum = [x/l for x in gradient_sum]
         parameters = [params_model[k] + gradient_sum[k] for k in range(len(gradient_sum))]
         temp_model = copy.deepcopy(self.model)
         params_dict = zip(temp_model.state_dict().keys(), parameters)
@@ -193,18 +195,31 @@ def main() -> None:
         help="Specifies the number of clients for dataset partition. \
         Picks partition 1 by default",
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=False,
+        help="Specifies the path for the dataset"
+    )
     args = parser.parse_args()
     n_clients = args.nclients
+    dataset_name = args.dataset
     id = n_clients
 
 
     #Dataset Loading
-    families = ["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-    mapping = read_mapping("./mapping.txt")
-    reversed_mapping = read_mapping_inverse("./mapping.txt")
-    dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset,client=False)
+    if dataset_name == "scdg1":
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
+        mapping = read_mapping("./mapping_scdg1.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")#read_mapping_inverse("./mapping.txt")
+    else:
+        ds_path = "./databases/examples_samy/BODMAS/01"
+        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+        mapping = read_mapping("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping.txt")
+        
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
 
 
@@ -215,7 +230,7 @@ def main() -> None:
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     client = CEServer(model, full_train_dataset, test_dataset,id)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())

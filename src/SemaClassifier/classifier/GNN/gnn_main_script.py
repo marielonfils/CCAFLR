@@ -1,5 +1,4 @@
 import time
-
 from matplotlib import pyplot as plt
 import gnn_helpers.dataset_utils as dataset_utils
 import argparse
@@ -10,24 +9,17 @@ import flwr as fl
 from gnn_helpers.utils import read_mapping, read_mapping_inverse, save_model, load_model, cprint
 import copy
 import json
-
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score,recall_score , f1_score, balanced_accuracy_score
-
 from models.GINEClassifier import GINE
 from models.GINJKClassifier import GINJK
 from models.GINMLPClassifier import GINMLP
-
 from torch_geometric.loader import DataLoader
-
 import pandas as pd
 import seaborn as sns
-
 from gnn_helpers.metrics_utils import *
 from gnn_helpers.models_training import *
 from gnn_helpers.models_tuning import *
-
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {DEVICE}")
 
 BATCH_SIZE_TEST=32
 

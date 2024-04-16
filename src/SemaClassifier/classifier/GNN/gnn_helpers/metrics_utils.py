@@ -7,9 +7,9 @@ import seaborn as sns
 
 def compute_metrics(y_true, y_pred):
     acc = accuracy_score(y_true, y_pred)
-    prec = precision_score(y_true, y_pred, average='weighted')
-    rec = recall_score(y_true, y_pred, average='weighted')
-    f1 = f1_score(y_true, y_pred, average='weighted')
+    prec = precision_score(y_true, y_pred, average='weighted', zero_division=0.0)
+    rec = recall_score(y_true, y_pred, average='weighted', zero_division=0.0)
+    f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0.0)
     bal_acc = balanced_accuracy_score(y_true, y_pred)
     return acc, prec, rec, f1, bal_acc
 
