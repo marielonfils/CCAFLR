@@ -1,0 +1,26 @@
+1. Launch a jupyter server :
+/home/flvm/flenv/bin/python3.8 /home/flvm/flenv/bin/jupyter-lab --no-browser --collaborative --ip=0.0.0.0 --port=8889 --notebook-dir=~/data -> flvm
+flower2/bin/python3.10 flower2/bin/jupyter-lab --no-browser --collaborative --ip=0.0.0.0 --port=8889 --notebook-dir=/home --allow-root ->flower
+    http://127.0.0.1:8889/lab?token=85231a63551cf1f9bd8cab25a23d6716ba6576f3b4903dee
+/home/fl/flower2/bin/python3.10 /home/flower2/bin/jupyter-lab --no-browser --collaborative --ip=0.0.0.0 --port=8889 --notebook-dir=
+
+
+2. make a tunnel
+
+ssh -i .ssh/id_rsa_ingi3 -D 9090 mlonfils@ssh1.info.ucl.ac.be ->flvm
+ssh -i .ssh/id_rsa_ingi3 -D 9091 mlonfils@ssh1.info.ucl.ac.be ->flower
+
+3. launch chrome with a proxy
+
+/usr/bin/google-chrome --user-data-dir="/tmp" --proxy-server="socks5://localhost:9090" ->flvm
+/usr/bin/google-chrome --user-data-dir="/tmp" --proxy-server="socks5://localhost:9091" ->flower
+
+
+4. connect to jupyter on the browser
+http://130.104.229.84:8889/lab ->flvm
+http://130.104.229.101:8889/lab ->flower
+
+git clone git@github.com:marielonfils/CCAFLR.git
+pip install jupyterlab
+pip install jupyter-collaboration
+python -m ipykernel install --user --name=myenv

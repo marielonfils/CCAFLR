@@ -1,0 +1,23 @@
+python -m venv ../FLenv
+source ../FLenv/bin/activate
+sudo apt install cmake
+git clone https://github.com/marielonfils/TenSEAL.git
+pip install wheel
+pip install poetry
+cd TenSEAL/
+python -m pip install --no-build-isolation --verbose --editable .
+cd ..
+git clone https://@github.com/marielonfils/flower.git
+cd flower
+python -m pip install --no-build-isolation --verbose --editable .
+cd ..
+pip install torch
+pip install torch_geometric
+pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cpu.html or pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install matplotlib
+pip install seaborn
+pip install progressbar2
+pip install grakel
+pip install dill
+pip install PyQt5
+pip install pyqt6
