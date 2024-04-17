@@ -220,7 +220,7 @@ def main() -> None:
         ds_path = "./databases/scdg1"
         families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
-        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")#read_mapping_inverse("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
     else:
         ds_path = "./databases/examples_samy/BODMAS/01"
         families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
