@@ -14,6 +14,7 @@ import copy
 
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
+import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 
 from collections import OrderedDict
@@ -36,11 +37,11 @@ CONVERGE_CRITERIA = 0.05
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,id) -> None:
+    def __init__(self, model, testset, y_test, id) -> None:
         super().__init__()
         self.model = model
-        self.trainset = trainset
         self.testset = testset
+        self.y_test= y_test
         self.id = id
         self.gradients = []
         self.Contribution_records=[]
@@ -51,7 +52,8 @@ class CEServer(fl.client.NumPyClient):
         
     def utility(self, S):
         if S == ():
-            accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+            test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+            accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             return float(accuracy)
         l = len(S)
         params_model = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -64,7 +66,8 @@ class CEServer(fl.client.NumPyClient):
         params_dict = zip(temp_model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         temp_model.load_state_dict(state_dict, strict=True)
-        accuracy, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(accuracy)
     
     def isnotconverge(self, k):
@@ -98,6 +101,7 @@ class CEServer(fl.client.NumPyClient):
                 u2 = util[tuple(sorted(t[:index+1]))]
                 SV += u2-u1
             SVs[idx] = SV/len(perms)
+        print(util)
         return SVs
         
     def get_contributions(self, gradients):
@@ -174,13 +178,13 @@ class CEServer(fl.client.NumPyClient):
         
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
+        print("################# EVALUATE CE SERVER #############################")
         parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters)
-        accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
-        
-    
-    
+
     
 def main() -> None:
 
@@ -212,7 +216,7 @@ def main() -> None:
         ds_path = "./databases/scdg1"
         families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
-        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")#read_mapping_inverse("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
     else:
         ds_path = "./databases/examples_samy/BODMAS/01"
         families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
@@ -231,7 +235,7 @@ def main() -> None:
     drop_ratio = 0.5
     residual = False
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    client = CEServer(model, full_train_dataset, test_dataset,id)
+    client = CEServer(model, test_dataset, y_test, id)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
 
