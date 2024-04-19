@@ -180,6 +180,7 @@ def main():
     strategy = fl.server.strategy.FedAvg(#fl.server.strategy.FedAvg(
         fraction_fit=0.2,  # Fraction of available clients used for training at each round
         min_fit_clients=n_clients,  # Minimum number of clients used for training at each round (override `fraction_fit`)
+        min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round
         min_available_clients=n_clients,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_fn(model, test_dataset, id,y_test),  # Evaluation function used by the server without enc
         evaluate_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),

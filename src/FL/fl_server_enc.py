@@ -226,6 +226,7 @@ def main():
     strategy = fl.server.strategy.MKFedAvg(
         fraction_fit=0.2,  # Fraction of available clients used for training at each round
         min_fit_clients=n_clients,#2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
+        min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round 
         min_available_clients=n_clients,#2,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id,y_test),  # Evaluation function used by the server 
         evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
