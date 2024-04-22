@@ -6,7 +6,7 @@ sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
 from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
-
+from AESCipher import AESCipher
 import flwr as fl
 import numpy as np
 import torch
@@ -36,7 +36,7 @@ DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
-
+AESkey = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -103,12 +103,12 @@ class GNNClient(fl.client.NumPyClient):
             parms_flat = parms_flat*len(self.trainset)
         return self.context,self.encrypt(parms_flat)
 
-    def get_gradients(self) -> List[np.ndarray]:
+    def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
         params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return gradient
+        return AESCipher(AESkey).encrypt(gradient)
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()

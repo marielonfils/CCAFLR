@@ -1,15 +1,15 @@
 #!/bin/bash
 declare -i nclients="3"
-declare -i nrounds="3"
+declare -i nrounds="6"
 filepath="./results"
 dataset="scdg1"
 
 echo "Starting server"
-python ./FL/fl_server_enc.py --nclients=${nclients} --filepath=${filepath}& #--dataset=${dataset}&
+python ./FL/fl_server_enc.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath}& # --dataset=${dataset}&
 sleep 5  # Sleep for 3s to give the server enough time to start
 
 echo "Starting CE server"
-python ./FL/fl_ce_server.py --nclients=${nclients}& #--dataset=${dataset}&
+python ./FL/fl_ce_server.py --nclients=${nclients}& # --dataset=${dataset}&
 
 for ((i=0; i<nclients; i++)); do
     echo "Starting client $i"

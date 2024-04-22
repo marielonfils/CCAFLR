@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import argparse
 import copy
-
+from AESCipher import AESCipher
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
@@ -21,6 +21,7 @@ from collections import OrderedDict
 from typing import Dict, List, Tuple
 from itertools import chain, combinations, permutations
 from pathlib import Path
+from time import time
 import sys
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
@@ -33,7 +34,8 @@ ROUND_TRUNC_THRESHOLD = 0.0
 EPSILON = 0.0
 CONVERGE_MIN_K = 30
 CONVERGE_CRITERIA = 0.05
-        
+AESkey = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
+
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -85,8 +87,9 @@ class CEServer(fl.client.NumPyClient):
         s = list(iterable)
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
     
-    def get_contributions2(self, gradients):
-        self.gradients = gradients
+    def get_contributions(self, gradients):
+        t1 = time()
+        self.gradients = [self.reshape_parameters(AESCipher(AESkey).decrypt(gradient)) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
         sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
@@ -101,11 +104,12 @@ class CEServer(fl.client.NumPyClient):
                 u2 = util[tuple(sorted(t[:index+1]))]
                 SV += u2-u1
             SVs[idx] = SV/len(perms)
-        print(util)
+        print("time to compute shapley values",time()-t1)
+        print("Shapley values:",SVs)
         return SVs
         
-    def get_contributions(self, gradients):
-        self.gradients = gradients
+    def get_contributions2(self, gradients):
+        self.gradients = [self.reshape_parameters(AESCipher(AESkey).decrypt(gradient)) for gradient in gradients]
         self.Contribution_records=[]
         N = len(gradients)   # number of participants
         idxs = [i for i in range(N)]
