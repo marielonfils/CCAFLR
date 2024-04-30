@@ -55,6 +55,36 @@ def init_all_datasets(path, families, mapping, reversed_mapping, n_clients, id):
 
     return full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx
 
+def init_all_datasets2(path, families, mapping, reversed_mapping, n_clients, id):
+
+    ### Dataset without temportal constraint
+    dataset, label, fam_idx, fam_dict = dataset_utils.init_dataset(path, families, reversed_mapping, [], {}, False)
+    train_idx, test_idx = dataset_utils.split_dataset_indexes(dataset, label)
+
+    n_train = int(len(train_idx) / (n_clients))
+    n_test = int(len(test_idx) / (n_clients+1))
+    train_partition = train_idx[(id-1) * n_train: id * n_train]
+    test_partition = test_idx[id * n_test: (id + 1) * n_test]
+    full_train_dataset,y_full_train, test_dataset, y_test = dataset_utils.get_datasets(dataset, train_partition, test_partition)
+
+    ### Dataset with temportal constraint
+    # with open("./SemaClassifier/classifier/GNN/gnn_helpers/rev_bodmas_mapping_hash.json", "r") as fp:
+    # with open("./SemaClassifier/classifier/GNN/gnn_helpers/rev_bodmas2_mapping.json", "r") as fp:
+    #     name_map = json.load(fp)
+    # dataset_dict, dataset, label, fam_idx, fam_dict = dataset_utils.temporal_init_dataset(path, families, reversed_mapping, [], {}, False, name_map)
+    # full_train_dataset,y_full_train, test_dataset, y_test = dataset_utils.temporal_split_train_test(dataset_dict, 0.7)
+
+    cprint(f"Client {id} : n_train {n_train}, start {id*n_train}, end {(id+1)*n_train}",id)
+    cprint(f"Client {id} : n_test {n_test}, start {id*n_test}, end {(id+1)*n_test}",id)
+    cprint(f"Client {id} : datasets length, {len(dataset)}, {len(full_train_dataset)}, {len(test_dataset)}",id)
+
+    # # Validation dataset
+    # trn_idx, val_idx = dataset_utils.split_dataset_indexes(full_train_dataset, y_full_train)
+    # train_dataset, y_train, val_dataset, y_val = dataset_utils.get_datasets(full_train_dataset, trn_idx, val_idx)
+
+    return full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx
+
+
 def main(batch_size, hidden, num_layers, flag, step_size, m, epochs, clf_model, tune, lr, ds_path, trained_model, plot_mtx, mapping, reversed_mapping, n_clients):
 
     id = n_clients

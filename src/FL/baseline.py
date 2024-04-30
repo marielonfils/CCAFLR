@@ -37,11 +37,10 @@ BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
 
-class GNNClient(fl.client.NumPyClient):
+class BaseClient():
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
     def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None ) -> None:
-        super().__init__()
         self.model = model
         self.trainset = trainset
         self.testset = testset
@@ -129,7 +128,7 @@ class GNNClient(fl.client.NumPyClient):
         return np.array(p,dtype=object)
     
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
-        self.set_parameters(parameters, config["N"])
+        #self.set_parameters(parameters, config["N"])
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         return self.get_parameters(config={}), len(self.trainset), loss    
     
@@ -149,11 +148,13 @@ class GNNClient(fl.client.NumPyClient):
         N=config.get("N")
         if N is None:
             N=1
-        self.set_parameters(parameters,N)
-        accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
-        #GNN_script.cprint(f"{self.id},{accuracy},{loss}", self.id)
-        return float(loss), len(self.testset), {"accuracy": float(accuracy)}
+        #self.set_parameters(parameters,N)
+        test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
+        metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time], self.filename)
+        GNN_script.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
+        return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
+    
     
     def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
     ) -> Tuple[float, int, Dict]:
@@ -194,7 +195,6 @@ def main() -> None:
         "--filepath",
         type=str,
         required=False,
-        default="./results",
         help="Specifies the path for storing results"
     )
     parser.add_argument(
@@ -228,7 +228,7 @@ def main() -> None:
         mapping = read_mapping("./mapping.txt")
         reversed_mapping = read_mapping_inverse("./mapping.txt")
         
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets2(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
@@ -241,9 +241,10 @@ def main() -> None:
     residual = False
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
-    #torch.save(model, f"HE/GNN_model.pt")
-    fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
+    client = BaseClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
+    for i in range(5):
+        client.fit([],{})
+        client.evaluate([],{})
     return filename
 if __name__ == "__main__":
     main()

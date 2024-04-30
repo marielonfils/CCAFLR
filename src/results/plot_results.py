@@ -18,6 +18,8 @@ def sort_xp(filepath,n_xp):
         if r.find("server")!=-1:
         #if r[24]=="s":
             d["server"]=r
+        if r.find("ce")!=-1:
+            d["ce"]=r
         else:
             cl.append(r)
     d["clients"]=sorted(cl)
