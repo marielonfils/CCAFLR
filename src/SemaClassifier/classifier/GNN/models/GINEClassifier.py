@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import global_mean_pool, global_add_pool, MessagePassing
-
+torch.manual_seed(0)
 '''
 GIN-e:
     h_v^{k} = MLP^{(k)}((1+\epsilon^{(k)}).h_v^{(k-1)} + \Sigma_{u \in \mathcal{N}(v)} \text{ReLU}(h_u^{(k-1)}+h_{uv}^{(k-1)}) )

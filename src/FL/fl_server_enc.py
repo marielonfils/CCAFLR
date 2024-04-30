@@ -246,10 +246,10 @@ def main():
         strategy=strategy,
         client_manager=client_manager,
         certificates=(
-        Path("./FL/.cache/certificates/ca.crt").read_bytes(),
-        Path("./FL/.cache/certificates/server.pem").read_bytes(),
-        Path("./FL/.cache/certificates/server.key").read_bytes(),
-    )
+            Path("./FL/.cache/certificates/ca.crt").read_bytes(),
+            Path("./FL/.cache/certificates/server.pem").read_bytes(),
+            Path("./FL/.cache/certificates/server.key").read_bytes(),),
+        enc=True,
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)

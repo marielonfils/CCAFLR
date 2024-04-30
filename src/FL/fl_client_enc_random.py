@@ -31,13 +31,13 @@ import tenseal as ts
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import json
 import time
+import random
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
-
+AESkey = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -110,7 +110,7 @@ class GNNClient(fl.client.NumPyClient):
         params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(gradient)
+        return AESCipher(AESkey).encrypt(gradient)
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -130,21 +130,40 @@ class GNNClient(fl.client.NumPyClient):
             offset+=n
         return np.array(p,dtype=object)
     
+    def update_random_parameters(self):
+        print("RANDOM CLIENT")
+        parameters = self.get_parameters(config={})
+        for i in range(len(parameters)):
+            sub_array = parameters[i]
+            if isinstance(parameters[i], np.ndarray) and parameters[i].ndim > 0:
+                for j in range(len(parameters[i])):
+                    if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
+                        for k in range(len(parameters[i][j])):
+                            random_float = random.uniform(-1, 1)
+                            parameters[i][j][k] = max(-1.0, min(1.0, parameters[i][j][k]+random_float))
+                    else:
+                        random_float = random.uniform(-1, 1)
+                        parameters[i][j] = max(-1.0, min(1.0, parameters[i][j]+random_float))
+            else:
+                random_float = random.uniform(-1, 1)
+                parameters[i] = max(-1.0, min(1.0, parameters[i]+random_float))
+        self.set_parameters(parameters,1)
+        return
+        
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
-        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        return self.get_parameters(config={}), len(self.trainset), loss    
+        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        self.update_random_parameters()
+        return self.get_parameters(config={}), len(self.trainset), {}    
     
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
         if flat:
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters, config)
         self.global_model = copy.deepcopy(self.model)
-        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        self.train_time=loss["train_time"]
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
-        GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
-        return self.get_parameters(config={}), len(self.trainset), loss
+        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        self.update_random_parameters()
+        return self.get_parameters(config={}), len(self.trainset), {}
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
@@ -191,11 +210,11 @@ def main() -> None:
         help="Specifies the number of clients for dataset partition. \
         Picks partition 1 by default",
     )
+    
     parser.add_argument(
         "--filepath",
         type=str,
         required=False,
-        default="./results",
         help="Specifies the path for storing results"
     )
     parser.add_argument(
@@ -242,12 +261,9 @@ def main() -> None:
     residual = False
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    
-    #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
     return filename
-    
 if __name__ == "__main__":
     main()

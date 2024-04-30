@@ -11,7 +11,7 @@ sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
 from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
 from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
-
+from AESCipher import AESCipher
 import flwr as fl
 import numpy as np
 import torch
@@ -21,7 +21,7 @@ from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inver
 
 from collections import OrderedDict
 from typing import Dict, List, Tuple
-
+import copy
 import time
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
@@ -32,6 +32,7 @@ BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
 
+AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -44,6 +45,7 @@ class GNNClient(fl.client.NumPyClient):
         self.y_test=y_test
         self.filename = filename
         self.train_time = 0
+        self.global_model = model
       
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -56,6 +58,7 @@ class GNNClient(fl.client.NumPyClient):
 
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str]) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters)
+        self.global_model = copy.deepcopy(self.model)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
@@ -68,8 +71,6 @@ class GNNClient(fl.client.NumPyClient):
 
         return self.get_parameters(config={}), len(self.trainset) ,{"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss["loss"]),"test_time": float(test_time),"train_time":float(self.train_time)}
     
-
-
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
         #self.set_parameters(parameters)
@@ -79,6 +80,12 @@ class GNNClient(fl.client.NumPyClient):
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
+    def get_gradients(self):
+        print("##########   COMPUTING GRADIENT  #################")
+        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
+        return AESCipher(AESKEY).encrypt(gradient)
     
     
     
@@ -110,9 +117,17 @@ def main() -> None:
         required=False,
         help="Specifies the path for storing results"
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=False,
+        help="Specifies the path for te dataset"
+    )
+    
     args = parser.parse_args()
     n_clients = args.nclients
     id = args.partition
+    dataset_name = args.dataset
     filename = args.filepath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
@@ -122,19 +137,18 @@ def main() -> None:
 
 
     #Dataset Loading
-    ds_path = "./databases/examples_samy/BODMAS/01" # BODMAS task
-    #ds_path = "./databases/scdg1"
-    #ds_path = "./databases/classification" # classification task
-    # ds_path = "./databases/detection" # detection task
-    # dataset, label, fam_idx, fam_dict, dataset_wl = GNN_script.init_dataset("./databases/examples_samy/BODMAS/01", families, reversed_mapping, [], {}, False)
-    # train_idx, test_idx = GNN_script.split_dataset_indexes(dataset, label)
-    # full_train_dataset,y_full_train, test_dataset,y_test = GNN_script.load_partition(n_clients=n_clients,id=id,train_idx=train_idx,test_idx=test_idx,dataset=dataset)
-    families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-    #families = ["benjamin","berbew","ceeinject","dinwod","ganelp","gepys","mira","sfone","sillyp2p","small","upatre","wabot","wacatac"]
-    mapping = read_mapping("./mapping.txt")#read_mapping("./mapping.txt") or mapping_scdg1
-    reversed_mapping = read_mapping_inverse("./mapping.txt")#read_mapping_inverse("./mapping.txt")
+    if dataset_name == "scdg1":
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
+        mapping = read_mapping("./mapping_scdg1.txt")
+        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
+    else:
+        ds_path = "./databases/examples_samy/BODMAS/01"
+        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+        mapping = read_mapping("./mapping.txt")
+        reversed_mapping = read_mapping_inverse("./mapping.txt")
+        
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
-   
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
@@ -145,12 +159,15 @@ def main() -> None:
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    # model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
+    #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
+    
+    #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
     return filename
+    
 if __name__ == "__main__":
     main()
     

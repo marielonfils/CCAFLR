@@ -87,6 +87,13 @@ class CEClientManager(ClientManager):
         ----------
         client : flwr.server.client_proxy.ClientProxy
         """
+        if client.cid in self.clients:
+            del self.clients[client.cid]
+
+            with self._cv:
+                self._cv.notify_all()
+                
+    def register_ce_server(self, client) -> None:
         self.ce_server = client
         if client.cid in self.clients:
             del self.clients[client.cid]
@@ -96,9 +103,8 @@ class CEClientManager(ClientManager):
 
     def all(self):
         """Return all available clients."""
-        self.register(self.ce_server)
-        return self.clients
-
+        return self.clients.values()
+        
     def sample(
         self,
         num_clients: int,
