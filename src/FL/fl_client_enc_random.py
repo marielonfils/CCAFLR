@@ -140,13 +140,13 @@ class GNNClient(fl.client.NumPyClient):
                     if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
                         for k in range(len(parameters[i][j])):
                             random_float = random.uniform(-1, 1)
-                            parameters[i][j][k] = max(-1.0, min(1.0, parameters[i][j][k]+random_float))
+                            parameters[i][j][k] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j][k]+random_float))
                     else:
                         random_float = random.uniform(-1, 1)
-                        parameters[i][j] = max(-1.0, min(1.0, parameters[i][j]+random_float))
+                        parameters[i][j] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j]+random_float))
             else:
                 random_float = random.uniform(-1, 1)
-                parameters[i] = max(-1.0, min(1.0, parameters[i]+random_float))
+                parameters[i] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i]+random_float))
         self.set_parameters(parameters,1)
         return
         
