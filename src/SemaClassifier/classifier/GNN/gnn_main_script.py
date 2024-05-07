@@ -25,6 +25,23 @@ BATCH_SIZE_TEST=32
 
 fam_idx = {}
 
+def init_split_dataset(mapping, reversed_mapping, n_clients, id):
+    if n_clients == id:
+        path = "./databases/server"
+    else:
+        path = "./databases/client"+str(id+1)
+    families = os.listdir(path)
+    dataset, label, fam_idx, fam_dict = dataset_utils.init_dataset(path, families, reversed_mapping, [], {}, False)
+    if n_clients == id:
+        y_test = []
+        for data in dataset:
+            y_test.append(data.y.item())
+        return [], [], dataset, y_test, label, fam_idx
+    else:
+        train_idx, test_idx = dataset_utils.split_dataset_indexes(dataset, label)
+        full_train_dataset,y_full_train, test_dataset, y_test = dataset_utils.get_datasets(dataset, train_idx, test_idx)
+        return full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx
+    
 def init_all_datasets(path, families, mapping, reversed_mapping, n_clients, id):
 
     ### Dataset without temportal constraint

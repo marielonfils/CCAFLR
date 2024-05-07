@@ -237,7 +237,7 @@ def main() -> None:
 
 
     #Dataset Loading
-    if dataset_name == "scdg1":
+    if "scdg1" in dataset_name:
         ds_path = "./databases/scdg1"
         families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
@@ -248,7 +248,10 @@ def main() -> None:
         mapping = read_mapping("./mapping.txt")
         reversed_mapping = read_mapping_inverse("./mapping.txt")
         
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    if dataset_name == "split_scdg1":
+        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
+    else:
+        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 

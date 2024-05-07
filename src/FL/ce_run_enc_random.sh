@@ -12,13 +12,15 @@ echo "Starting CE server"
 python ./FL/fl_ce_server.py --enc --nclients=${nclients} --dataset=${dataset}&
 sleep 9
 
-for ((i=0; i<nclients; i++)); do
+for ((i=0; i<nclients-1; i++)); do
     echo "Starting client $i"
     python ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset}&
 done
+sleep 2
+
+echo "Starting client 3"
+python ./FL/fl_client_enc_random.py --nclients=${nclients} --partition=4 --filepath=${filepath} --dataset=${dataset}&
     
-
-
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM
 # Wait for all background processes to complete
