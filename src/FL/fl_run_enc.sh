@@ -1,24 +1,24 @@
 #!/bin/bash
-declare -i nclients="2"
-declare -i nrounds="2"
+declare -i nclients="9"
+declare -i nrounds="20"
 declare -i ntimes="1"
-filepath="./results"
+filepath="./results/loop3"
 filename="./results/xp.txt"
-filepre="./results/loop3/xp_"
+filepre="./results/loop3/xp_101"
 fileext=".txt"
 dataset="split_scdg1"
 
 
 #for ((l=10; l<11; l++)); do
-for ((k=2; k<3; k++)); do
+for ((k=8; k<nclients; k++)); do
     for ((j=0; j<ntimes;j++)); do
         echo "Starting server $j"
         pids=()
         current_date_time="`date +%Y%m%d-%H%M%S` "
-        f="${filepre}${k}_${l}${fileext}"
+        f="${filepre}${k}_${nrounds}${fileext}"
         echo -n $current_date_time >> $f
         echo $f
-        python ./FL/fl_server_enc.py --nclients=${k} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
+        python ./FL/fl_server_enc.py --nclients=${k} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
         pids+=($!)
         sleep 30
     
