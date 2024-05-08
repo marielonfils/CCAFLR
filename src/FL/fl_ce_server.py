@@ -21,7 +21,7 @@ from collections import OrderedDict
 from typing import Dict, List, Tuple
 from itertools import chain, combinations, permutations
 from pathlib import Path
-from time import time
+import time
 import sys
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
@@ -34,9 +34,9 @@ AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, testset, y_test, id, enc) -> None:
+    def __init__(self, model, testset, y_test, id, enc, filename=None) -> None:
         super().__init__()
-        self.t = time()
+        self.t = time.time()
         self.model = model
         self.testset = testset
         self.y_test= y_test
@@ -46,6 +46,7 @@ class CEServer(fl.client.NumPyClient):
         self.last_k=10
         self.round = 0
         self.enc = enc
+        self.filename=filename
          
     def identify(self):
         return True
@@ -73,7 +74,7 @@ class CEServer(fl.client.NumPyClient):
     
     def get_contributions(self, gradients):
         self.round += 1
-        t1 = time()
+        t1 = time.time()
         self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
@@ -89,6 +90,10 @@ class CEServer(fl.client.NumPyClient):
                 u2 = util[tuple(sorted(t[:index+1]))]
                 SV += u2-u1
             SVs[idx] = SV/len(perms)
+        t2=time.time()
+        c=[str(self.model.__class__.__name__),N, t2-t1]
+        c.extend(SVs)
+        metrics_utils.write_contribution(c, self.filename)
         return SVs
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
@@ -140,6 +145,12 @@ def main() -> None:
         help="Specifies the path for the dataset",
     )
     parser.add_argument(
+        "--filepath",
+        type=str,
+        required=False,
+        help="Specifies the path for storing results"
+    )
+    parser.add_argument(
         "--enc",
         action="store_true",
         help="Specifies if there is encryption or not",
@@ -149,6 +160,13 @@ def main() -> None:
     dataset_name = args.dataset
     id = n_clients
     enc = args.enc
+    filename = args.filepath
+    if filename is not None:
+        timestr1 = time.strftime("%Y%m%d-%H%M%S")
+        timestr2 = time.strftime("%Y%m%d-%H%M")
+        filename = f"{filename}/{timestr2}/ce{id}_{timestr1}.csv"
+    print("FFFNNN",filename)
+
 
 
     #Dataset Loading
@@ -180,7 +198,7 @@ def main() -> None:
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
     #Starting client
-    client = CEServer(model, test_dataset, y_test, id, enc)
+    client = CEServer(model, test_dataset, y_test, id, enc, filename)
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
 
 if __name__ == "__main__":

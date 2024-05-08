@@ -44,6 +44,22 @@ def write_model(filename, model):
         for v in model:
             f.write(f"{v}: {model[v]}\n")
 
+def write_contribution(results, file):
+    # Write stats and params in csv file
+    p = file
+    if not os.path.isfile(p):
+        os.makedirs(os.path.dirname(file), exist_ok=True)
+        title="model,N,Time"
+        for i in range(1,len(results)-2):
+            title+=f",Client{i}"
+        with open(p, "w") as f:
+            f.write(title+"\n")
+    l=f"{results[0]}"
+    for i in range(1,len(results)):
+        l+=f",{results[i]}"
+    with open(p, "a") as f:
+        f.write(l+"\n")
+
 def write_to_csv(results, file):
     # Write stats and params in csv file
     p = file

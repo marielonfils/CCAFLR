@@ -151,7 +151,7 @@ def main():
     parser.add_argument(
         "--nclients",
         type=int,
-        default=1,
+        default=2,
         choices=range(1, 10),
         required=False,
         help="Specifies the number of clients. \
@@ -178,13 +178,19 @@ def main():
         required=False,
         help="Specifies the path for te dataset"
     )
-    
+    parser.add_argument(
+        "--noce",
+        action="store_false",
+        help="Specifies if there is contribution evaluation or not",
+    )
+
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
     filename = args.filepath
     dataset_name = args.dataset
+    ce=args.noce
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -253,6 +259,7 @@ def main():
             Path("./FL/.cache/certificates/server.pem").read_bytes(),
             Path("./FL/.cache/certificates/server.key").read_bytes(),),
         enc=True,
+        contribution=ce
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)

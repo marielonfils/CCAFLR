@@ -1,37 +1,47 @@
 #!/bin/bash
-declare -i nclients="8"
+declare -i nclients="2"
 declare -i nrounds="2"
 declare -i ntimes="1"
 filepath="./results"
 filename="./results/xp.txt"
-filename1="./results/xp1.txt"
-filename2="./results/xp2.txt"
+filepre="./results/loop3/xp_"
+fileext=".txt"
 dataset="split_scdg1"
 
 
-for ((j=0; j<ntimes;j++)); do
-    echo "Starting server $j"
-    pids=()
-    current_date_time="`date +%Y%m%d-%H%M%S` "
-    echo -n $current_date_time >> $filename
-    python ./FL/fl_server_enc.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $filename &
-    pids+=($!)
-    sleep 10
-
-    for ((i=0; i<nclients; i++)); do
-        echo "Starting client $i"
-        python ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $filename &
+#for ((l=10; l<11; l++)); do
+for ((k=2; k<3; k++)); do
+    for ((j=0; j<ntimes;j++)); do
+        echo "Starting server $j"
+        pids=()
+        current_date_time="`date +%Y%m%d-%H%M%S` "
+        f="${filepre}${k}_${l}${fileext}"
+        echo -n $current_date_time >> $f
+        echo $f
+        python ./FL/fl_server_enc.py --nclients=${k} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
         pids+=($!)
-    done
-
-    for pid in ${pids[*]}; do
-        echo "Waiting for pid $pid"
-        wait $pid
-    done
-    echo -e "" >> $filename
+        sleep 30
+    
+        echo "Starting CE server"
+        python ./FL/fl_ce_server.py --nclients=${k} --filepath=${filepath} --dataset=${dataset} --enc| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f & #--dataset=${dataset}&
+        pids+=($!)
+    
+        for ((i=0; i<$k; i++)); do
+            echo "Starting client $i"
+            python ./FL/fl_client_enc.py --nclients=${k} --partition=${i} --filepath=${filepath} --dataset=${dataset}| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
+            pids+=($!)
+        done
+    
+        for pid in ${pids[*]}; do
+            echo "Waiting for pid $pid"
+            wait $pid
+        done
+        echo -e "" >> $f
+    done    
 done
+#done
 
-echo "\n" >> $filename1
+
 
 # python ./SemaClassifier/classifier/GNN/GNN_script.py --nclients=${nclients} &
 
