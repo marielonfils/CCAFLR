@@ -140,13 +140,13 @@ class GNNClient(fl.client.NumPyClient):
                     if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
                         for k in range(len(parameters[i][j])):
                             random_float = random.uniform(-1, 1)
-                            parameters[i][j][k] = max(-1.0, min(1.0, parameters[i][j][k]+random_float))
+                            parameters[i][j][k] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j][k]+random_float))
                     else:
                         random_float = random.uniform(-1, 1)
-                        parameters[i][j] = max(-1.0, min(1.0, parameters[i][j]+random_float))
+                        parameters[i][j] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j]+random_float))
             else:
                 random_float = random.uniform(-1, 1)
-                parameters[i] = max(-1.0, min(1.0, parameters[i]+random_float))
+                parameters[i] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i]+random_float))
         self.set_parameters(parameters,1)
         return
         
@@ -237,7 +237,7 @@ def main() -> None:
 
 
     #Dataset Loading
-    if dataset_name == "scdg1":
+    if "scdg1" in dataset_name:
         ds_path = "./databases/scdg1"
         families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
@@ -248,7 +248,10 @@ def main() -> None:
         mapping = read_mapping("./mapping.txt")
         reversed_mapping = read_mapping_inverse("./mapping.txt")
         
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    if dataset_name == "split_scdg1":
+        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
+    else:
+        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
