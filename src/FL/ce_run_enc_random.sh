@@ -5,16 +5,16 @@ filepath="./results"
 dataset="split_scdg1"
 
 echo "Starting server"
-python ./FL/fl_server_enc.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath} --dataset=${dataset}&
+python3 ./FL/fl_server_enc.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath} --dataset=${dataset}&
 sleep 9  # Sleep for 3s to give the server enough time to start
 
 echo "Starting CE server"
-python ./FL/fl_ce_server.py --enc --nclients=${nclients} --dataset=${dataset}&
+python3 ./FL/fl_ce_server.py --enc --nclients=${nclients} --dataset=${dataset}&
 sleep 9
 
 for ((i=0; i<nclients-1; i++)); do
     echo "Starting client $i"
-    python ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset}&
+    python3 ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset}&
 done
 sleep 2
 
