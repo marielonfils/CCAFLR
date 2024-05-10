@@ -218,8 +218,10 @@ def main() -> None:
 
 
     #Dataset Loading
-    families=[]
+    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
     ds_path=""
+    mapping = {}
+    reversed_mapping = {}
     if "scdg1" in dataset_name:
         mapping = read_mapping("./mapping_scdg1.txt")
         reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
