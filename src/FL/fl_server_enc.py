@@ -174,9 +174,24 @@ def main():
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for te dataset"
+    )
+    parser.add_argument(
+        "--methodo",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the methodology used to deal with client that have low SV"
+    )
+    parser.add_argument(
+        "--threshold",
+        default = -1.0,
+        type=float,
+        required=False,
+        help="Specifies the threshold to delete clients"
     )
     
     args = parser.parse_args()
@@ -185,6 +200,8 @@ def main():
     nrounds = args.nrounds
     filename = args.filepath
     dataset_name = args.dataset
+    methodo = args.methodo
+    threshold = args.threshold
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -252,6 +269,8 @@ def main():
             Path("./FL/.cache/certificates/server.pem").read_bytes(),
             Path("./FL/.cache/certificates/server.key").read_bytes(),),
         enc=True,
+        methodo = methodo,
+        threshold = threshold,
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)

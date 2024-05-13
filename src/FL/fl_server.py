@@ -133,15 +133,33 @@ def main():
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for the dataset",
     )
+    parser.add_argument(
+        "--methodo",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the methodology used to deal with client that have low SV"
+    )
+    parser.add_argument(
+        "--threshold",
+        default = -1.0,
+        type=float,
+        required=False,
+        help="Specifies the threshold to delete clients"
+    )
+    
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
     dataset_name = args.dataset
+    methodo = args.methodo
+    threshold = args.threshold
     filename = args.filepath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
@@ -204,11 +222,11 @@ def main():
         strategy=strategy,
         client_manager=client_manager,
         certificates=(
-        Path("./FL/.cache/certificates/ca.crt").read_bytes(),
-        Path("./FL/.cache/certificates/server.pem").read_bytes(),
-        Path("./FL/.cache/certificates/server.key").read_bytes(),
-    )
-
+            Path("./FL/.cache/certificates/ca.crt").read_bytes(),
+            Path("./FL/.cache/certificates/server.pem").read_bytes(),
+            Path("./FL/.cache/certificates/server.key").read_bytes(),),
+        methodo = methodo,
+        threshold = threshold,
     )
     metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
     return filename

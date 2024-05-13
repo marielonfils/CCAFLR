@@ -70,26 +70,6 @@ class CEServer(fl.client.NumPyClient):
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(accuracy)
 
-    
-    def get_contributions(self, gradients):
-        self.round += 1
-        t1 = time()
-        self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
-        N = len(gradients)
-        idxs = [i for i in range(N)]
-        sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
-        util = {S:self.utility(S=S) for S in sets}
-        SVs = [0 for i in range(N)]
-        perms = list(permutations(idxs))
-        for idx in idxs:
-            SV = 0
-            for t in perms:
-                index = t.index(idx)
-                u1 = util[tuple(sorted(t[:index]))]
-                u2 = util[tuple(sorted(t[:index+1]))]
-                SV += u2-u1
-            SVs[idx] = SV/len(perms)
-        return SVs
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         params_dict = zip(self.model.state_dict().keys(), parameters)
@@ -119,6 +99,98 @@ class CEServer(fl.client.NumPyClient):
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
 
+    def get_contributions(self, gradients):
+        self.round += 1
+        t1 = time()
+        self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
+        N = len(gradients)
+        idxs = [i for i in range(N)]
+        sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
+        util = {S:self.utility(S=S) for S in sets}
+        SVs = [0 for i in range(N)]
+        perms = list(permutations(idxs))
+        for idx in idxs:
+            SV = 0
+            for t in perms:
+                index = t.index(idx)
+                u1 = util[tuple(sorted(t[:index]))]
+                u2 = util[tuple(sorted(t[:index+1]))]
+                SV += u2-u1
+            SVs[idx] = SV/len(perms)
+        t2 = time()
+        self.get_contributions_gtg(gradients)
+        print("Original shapley","time: "+str(t2-t1),SVs)
+        return SVs
+        
+    def isnotconverge(self, k):
+        if k <= 30:
+            return True
+        if k > 100:  # to avoid infinite loop
+             return False
+        all_vals=(np.cumsum(self.Contribution_records, 0)/
+                  np.reshape(np.arange(1, len(self.Contribution_records)+1), (-1,1)))[-self.last_k:]
+        errors = np.mean(np.abs(all_vals[-self.last_k:] - all_vals[-1:])/(np.abs(all_vals[-1:]) + 1e-12), -1)
+        if np.max(errors) > 0.05:
+            return True
+        return False
+        
+    def powersettool(self, iterable):
+        "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+        s = list(iterable)
+        return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+
+    def get_contributions_gtg(self, gradients):  #GTG shapley implem
+        t1 = time()
+        self.gradients = self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
+        self.Contribution_records=[]
+        N = len(gradients)   # number of participants
+        idxs = [i for i in range(N)]
+        util = {}  #record utilities for all group permutations
+        
+        S_0 = ()    # initial model = empty set
+        util[S_0] = self.utility(S = S_0)     # v0 = V(Mt)  initial model utility
+        S_all = list(self.powersettool(idxs))[-1]  # final model = full set of participants
+        util[S_all] = self.utility(S = S_all)       # vN = V(Mt+1)  final model utility 
+      
+        if abs(util[S_all]-util[S_0]) <= 0.01:  # between round truncation
+            t2 = time()
+            SVs = [0 for i in range(N)]
+            print("GTG shapley","time: "+str(t2-t1),SVs)
+            return 
+
+        k=0
+        while self.isnotconverge(k):
+            for pi in idxs:
+                k+=1
+                v=[0 for i in range(N+1)]  # vk[0,...,N]  utilities of future models
+                v[0]=util[S_0]             # vk,0 = v0
+                marginal_contribution_k=[0 for i in range(N)] # marginal contributions at iteration k
+                idxs_k=np.concatenate((np.array([pi]),np.random.permutation([p for p in idxs if p !=pi])))  #pik partial permutation
+
+                for j in range(1,N+1):
+                    # key = C subset
+                    C=idxs_k[:j]      # participants subset of size j
+                    C=tuple(np.sort(C,kind='mergesort'))
+
+                    #truncation
+                    if abs(util[S_all] - v[j-1]) >= 0.001:         # within round truncation (remaining marginal gain small = |vN-vk,j-1|)
+                        if util.get(C)!=None:
+                            v[j]=util[C]           # if vk,j already computed 
+                        else:
+                            v[j]=self.utility(S=C)    # vk,j = utility of model with gradiants updates from participant set C
+                    else:                           # here truncation because gain too small
+                        v[j]=v[j-1]
+
+                    util[C] = v[j]         # record calculated V(C)
+
+                    marginal_contribution_k[idxs_k[j-1]-1] = v[j] - v[j-1]
+                self.Contribution_records.append(marginal_contribution_k)
+        shapley_value = (np.cumsum(self.Contribution_records, 0)/
+                         np.reshape(np.arange(1, len(self.Contribution_records)+1), (-1,1)))[-1:].tolist()[0]
+        SVs = [shapley_value[(i-1)%N] for i in range(N)]
+        t2 = time()
+        print("GTG shapley","time: "+str(t2-t1),SVs)
+        return
     
 def main() -> None:
 
@@ -135,6 +207,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for the dataset",

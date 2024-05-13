@@ -199,6 +199,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for te dataset"

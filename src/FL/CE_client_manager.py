@@ -12,6 +12,8 @@ class CEClientManager(ClientManager):
 
     def __init__(self) -> None:
         self.ce_server = 0
+        self.deleted = {}
+        self.waiting = {}
         self.clients = {}
         self._cv = threading.Condition()
 
@@ -89,7 +91,6 @@ class CEClientManager(ClientManager):
         """
         if client.cid in self.clients:
             del self.clients[client.cid]
-
             with self._cv:
                 self._cv.notify_all()
                 
@@ -97,13 +98,41 @@ class CEClientManager(ClientManager):
         self.ce_server = client
         if client.cid in self.clients:
             del self.clients[client.cid]
-
             with self._cv:
                 self._cv.notify_all()
+    
+    def reregister(self, client) -> None:
+        if client.cid in self.waiting:
+            self.clients[client.cid] = client
+            del self.waiting[client.cid]
+            with self._cv:
+                self._cv.notify_all()
+        return [self.clients[cid] for cid in self.clients]
+                
+    def eliminate(self, client) -> None:
+        if client.cid in self.clients:
+            self.deleted[client.cid] = client
+            del self.clients[client.cid]
+            with self._cv:
+                self._cv.notify_all()
+        return [self.clients[cid] for cid in self.clients]
+                
+    def set_aside(self, client) -> None:
+        if client.cid in self.clients:
+            self.waiting[client.cid] = client
+            del self.clients[client.cid]
+            with self._cv:
+                self._cv.notify_all()
+        return [self.clients[cid] for cid in self.clients]
 
     def all(self):
         """Return all available clients."""
-        return self.clients.values()
+        for cid in self.waiting:
+            self.register(self.waiting[cid])
+        for cid in self.deleted:
+            self.register(self.deleted[cid])
+        self.register(self.ce_server)
+        return self.clients
         
     def sample(
         self,
@@ -122,7 +151,6 @@ class CEClientManager(ClientManager):
             available_cids = [
                 cid for cid in available_cids if criterion.select(self.clients[cid])
             ]
-
         if num_clients > len(available_cids):
             log(
                 INFO,
@@ -132,7 +160,6 @@ class CEClientManager(ClientManager):
                 num_clients,
             )
             return []
-
         sampled_cids = random.sample(available_cids, num_clients)
         return [self.clients[cid] for cid in sampled_cids]
         
