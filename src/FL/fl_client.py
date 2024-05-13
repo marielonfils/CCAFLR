@@ -137,9 +137,11 @@ def main() -> None:
 
 
     #Dataset Loading
+    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
+    ds_path=""
+    mapping = {}
+    reversed_mapping = {}
     if "scdg1" in dataset_name:
-        ds_path = "./databases/scdg1"
-        families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
         reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
     else:
@@ -147,6 +149,10 @@ def main() -> None:
         families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
         mapping = read_mapping("./mapping.txt")
         reversed_mapping = read_mapping_inverse("./mapping.txt")
+    
+    if "scdg1" == dataset_name:
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
         
     if dataset_name == "split_scdg1":
         full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
