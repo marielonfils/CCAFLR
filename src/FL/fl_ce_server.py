@@ -21,7 +21,7 @@ from collections import OrderedDict
 from typing import Dict, List, Tuple
 from itertools import chain, combinations, permutations
 from pathlib import Path
-from time import time
+import time
 import sys
 sys.path.append('../../../../../TenSEAL')
 import tenseal as ts
@@ -34,9 +34,9 @@ AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, testset, y_test, id, enc, filename=None) -> None:
+    def __init__(self, model, testset, y_test, id, enc, filename) -> None:
         super().__init__()
-        self.t = time()
+        self.t = time.time()
         self.model = model
         self.testset = testset
         self.y_test= y_test
@@ -102,7 +102,7 @@ class CEServer(fl.client.NumPyClient):
 
     def get_contributions(self, gradients):
         self.round += 1
-        t1 = time()
+        t1 = time.time()
         self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
@@ -118,7 +118,7 @@ class CEServer(fl.client.NumPyClient):
                 u2 = util[tuple(sorted(t[:index+1]))]
                 SV += u2-u1
             SVs[idx] = SV/len(perms)
-        t2 = time()
+        t2 = time.time()
         c=["original_shapley",str(self.model.__class__.__name__),N, t2-t1]
         c.extend(SVs)
         metrics_utils.write_contribution(c, self.filename)
@@ -144,7 +144,7 @@ class CEServer(fl.client.NumPyClient):
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
     def get_contributions_gtg(self, gradients):  #GTG shapley implem
-        t1 = time()
+        t1 = time.time()
         self.gradients = self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
         self.Contribution_records=[]
         N = len(gradients)   # number of participants
@@ -157,8 +157,11 @@ class CEServer(fl.client.NumPyClient):
         util[S_all] = self.utility(S = S_all)       # vN = V(Mt+1)  final model utility 
       
         if abs(util[S_all]-util[S_0]) <= 0.01:  # between round truncation
-            t2 = time()
+            t2 = time.time()
             SVs = [0 for i in range(N)]
+            c=["gtg_shapley",str(self.model.__class__.__name__),N, t2-t1]
+            c.extend(SVs)
+            metrics_utils.write_contribution(c, self.filename)
             print("GTG shapley","time: "+str(t2-t1),SVs)
             return 
 
@@ -192,7 +195,7 @@ class CEServer(fl.client.NumPyClient):
         shapley_value = (np.cumsum(self.Contribution_records, 0)/
                          np.reshape(np.arange(1, len(self.Contribution_records)+1), (-1,1)))[-1:].tolist()[0]
         SVs = [shapley_value[(i-1)%N] for i in range(N)]
-        t2 = time()
+        t2 = time.time()
         c=["gtg_shapley",str(self.model.__class__.__name__),N, t2-t1]
         c.extend(SVs)
         metrics_utils.write_contribution(c, self.filename)
@@ -235,11 +238,14 @@ def main() -> None:
     dataset_name = args.dataset
     id = n_clients
     enc = args.enc
+    wo = ""
+    if not enc:
+        wo = "_wo"
     filename = args.filepath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
-        filename = f"{filename}/{timestr2}/ce{id}_{timestr1}.csv"
+        filename = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}.csv"
     print("FFFNNN",filename)
 
 
