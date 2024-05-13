@@ -137,12 +137,19 @@ def main():
         required=False,
         help="Specifies the path for the dataset",
     )
+    parser.add_argument(
+        "--noce",
+        action="store_false",
+        help="Specifies if there is contribution evaluation or not",
+    )
+
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
     dataset_name = args.dataset
     filename = args.filepath
+    ce=args.noce
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -151,9 +158,11 @@ def main():
     print("FFFNNN",filename)
 
     #Dataset Loading
+    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
+    ds_path=""
+    mapping = {}
+    reversed_mapping = {}
     if "scdg1" in dataset_name:
-        ds_path = "./databases/scdg1"
-        families=os.listdir(ds_path)
         mapping = read_mapping("./mapping_scdg1.txt")
         reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
     else:
@@ -161,6 +170,10 @@ def main():
         families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
         mapping = read_mapping("./mapping.txt")
         reversed_mapping = read_mapping_inverse("./mapping.txt")
+    
+    if "scdg1" == dataset_name:
+        ds_path = "./databases/scdg1"
+        families=os.listdir(ds_path)
     
     if dataset_name == "split_scdg1":
         full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
@@ -208,7 +221,8 @@ def main():
         Path("./FL/.cache/certificates/ca.crt").read_bytes(),
         Path("./FL/.cache/certificates/server.pem").read_bytes(),
         Path("./FL/.cache/certificates/server.key").read_bytes(),
-    )
+        ),
+        contribution=ce
 
     )
     metrics_utils.write_history_to_csv(hist,model, nrounds, filename)

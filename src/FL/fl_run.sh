@@ -1,9 +1,11 @@
 #!/bin/bash
-declare -i nclients="8"
+declare -i nclients="2"
 declare -i nrounds="2"
 declare -i ntimes="1"
-filepath="./results"
-filename="./results/xp_wo.txt"
+filepath="./results/loop4"
+filename="./results/xp.txt"
+filepre="./results/loop4/xp_101_noenc_noce_"
+fileext=".txt"
 dataset="split_scdg1"
 
 
@@ -12,14 +14,16 @@ for ((j=0; j<ntimes;j++)); do
     echo "Starting server $j"
     pids=()
     current_date_time="`date +%Y%m%d-%H%M%S` "
-    echo -n $current_date_time >> $filename
-    python ./FL/fl_server.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $filename &
+    f="${filepre}${k}_${nrounds}${fileext}"
+    echo -n $current_date_time >> $f
+    echo $f
+    python ./FL/fl_server.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
     pids+=($!)
     sleep 10
 
     for ((i=0; i<nclients; i++)); do
         echo "Starting client $i"
-        python ./FL/fl_client.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $filename &
+        python ./FL/fl_client.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
         pids+=($!)
     done
 
@@ -27,7 +31,7 @@ for ((j=0; j<ntimes;j++)); do
         echo "Waiting for pid $pid"
         wait $pid
     done
-    echo -e "" >> $filename
+    echo -e "" >> $f
 done
 
 # python ./SemaClassifier/classifier/GNN/GNN_script.py --nclients=${nclients} &
