@@ -11,7 +11,7 @@ python3 ./FL/fl_server_enc.py --nrounds=${nrounds} --nclients=${nclients} --file
 sleep 9  # Sleep for 3s to give the server enough time to start
 
 echo "Starting CE server"
-python3 ./FL/fl_ce_server.py --enc --nclients=${nclients} --dataset=${dataset}&
+python3 ./FL/fl_ce_server.py --enc --nclients=${nclients} --filepath=${filepath} --dataset=${dataset}&
 sleep 9
 
 for ((i=0; i<nclients; i++)); do
