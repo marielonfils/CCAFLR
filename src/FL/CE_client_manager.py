@@ -131,7 +131,8 @@ class CEClientManager(ClientManager):
             self.register(self.waiting[cid])
         for cid in self.deleted:
             self.register(self.deleted[cid])
-        self.register(self.ce_server)
+        if self.ce_server != 0:
+            self.register(self.ce_server)
         return self.clients
         
     def sample(
@@ -139,12 +140,15 @@ class CEClientManager(ClientManager):
         num_clients: int,
         min_num_clients: Optional[int] = None,
         criterion = None,
+        timeout: Optional[int] = None
     ):
         """Sample a number of Flower ClientProxy instances."""
         # Block until at least num_clients are connected.
         if min_num_clients is None:
             min_num_clients = num_clients
-        self.wait_for(min_num_clients)
+        if timeout is None:
+            timeout = 86400
+        self.wait_for(min_num_clients, timeout)
         # Sample clients which meet the criterion
         available_cids = list(self.clients)
         if criterion is not None:

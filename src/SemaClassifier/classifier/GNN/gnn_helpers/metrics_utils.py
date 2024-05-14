@@ -49,8 +49,8 @@ def write_contribution(results, file):
     p = file
     if not os.path.isfile(p):
         os.makedirs(os.path.dirname(file), exist_ok=True)
-        title="model,N,Time"
-        for i in range(1,len(results)-2):
+        title="shapley,model,N,Time"
+        for i in range(1,len(results)-3):
             title+=f",Client{i}"
         with open(p, "w") as f:
             f.write(title+"\n")
