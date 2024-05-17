@@ -72,7 +72,7 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test):
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
         GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
         
-        return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0}
+        return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0, "predictions": y_pred}#str(np.array_str(np.array(y_pred),max_line_width=10**50))}
 
     return evaluate
 
@@ -192,7 +192,7 @@ def main():
     # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
-    metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
+    metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset),"labels":str(y_test)})
     
     
     # FL strategy
@@ -225,7 +225,10 @@ def main():
         contribution=ce
 
     )
-    metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
+    if filename is not None:
+        metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
+        with open(filename,'a') as f:
+            f.write(str(y_test)+"\n")
     return filename
 
 if __name__ == "__main__":

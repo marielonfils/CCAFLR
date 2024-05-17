@@ -14,12 +14,12 @@ for ((j=0; j<ntimes;j++)); do
     echo "Starting server $j"
     pids=()
     current_date_time="`date +%Y%m%d-%H%M%S` "
-    f="${filepre}${k}_${nrounds}${fileext}"
+    f="${filepre}${nclients}_${nrounds}${fileext}"
     echo -n $current_date_time >> $f
     echo $f
     python ./FL/fl_server.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
     pids+=($!)
-    sleep 10
+    sleep 40
 
     for ((i=0; i<nclients; i++)); do
         echo "Starting client $i"

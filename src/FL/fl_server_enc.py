@@ -113,7 +113,7 @@ def get_evaluate_enc_fn(model: torch.nn.Module, valset,id,y_test):
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
         GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
         
-        return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0}
+        return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0, "predictions": y_pred}
 
     return evaluate
 
@@ -234,7 +234,7 @@ def main():
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
     if filename is not None:
-        metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
+        metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset),"labels":str(y_test)})
 
     
     # FL strategy
@@ -252,7 +252,6 @@ def main():
     )
 
     client_manager = CEClientManager()
-    
     # import pdb; pdb.set_trace()
     hist=fl.server.start_server(
         length=len(np.hstack(np.array([val.cpu().numpy().flatten() for _, val in model.state_dict().items()],dtype=object),dtype=object)),
@@ -269,6 +268,8 @@ def main():
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
+        with open(filename,'a') as f:
+            f.write(str(y_test)+"\n")
     return
 
 if __name__ == "__main__":

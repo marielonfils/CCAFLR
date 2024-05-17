@@ -66,10 +66,10 @@ def write_to_csv(results, file):
     if not os.path.isfile(p):
         os.makedirs(os.path.dirname(file), exist_ok=True)
         with open(p, "w") as f:
-            f.write("model,Accuracy,Precision,Recall,F1 score,Balanced Accuracy,Loss,Train time,Test time\n")
-    
+            f.write("model,Accuracy,Precision,Recall,F1 score,Balanced Accuracy,Loss,Train time,Test time,Predictions\n")
+                
     with open(p, "a") as f:
-        f.write(f"{results[0]},{results[1]},{results[2]},{results[3]},{results[4]},{results[5]},{results[6]},{results[7]},{results[8]}\n")
+        f.write(f"{results[0]},{results[1]},{results[2]},{results[3]},{results[4]},{results[5]},{results[6]},{results[7]},{results[8]},{results[9]}\n")
 def write_history_to_csv(hist,model, nrounds, file):
     if not os.path.isfile(file):
         os.makedirs(os.path.dirname(file), exist_ok=True)
@@ -80,20 +80,28 @@ def write_history_to_csv(hist,model, nrounds, file):
             f.write(t+"\n")
     with open(file,"a") as f:
         for m in hist.metrics_distributed_fit:
-            t=f"{model.__class__.__name__},{m}_df, 0.0,"
+            t=f"{model.__class__.__name__},{m}_df, 0.0"
             for v in hist.metrics_distributed_fit[m]:
-                t+=f"{v[1]},"
+                t+=f",{v[1]}"
             f.write(t+"\n")
         for m in hist.metrics_distributed:
-            t=f"{model.__class__.__name__},{m}_d,"
+            t=f"{model.__class__.__name__},{m}_d"
             for v in hist.metrics_distributed[m]:
-                t+=f"{v[1]},"
+                t+=f",{v[1]}"
             f.write(t+"\n")
         for m in hist.metrics_centralized:
-            t=f"{model.__class__.__name__},{m}_c,"
-            for v in hist.metrics_centralized[m]:
-                t+=f"{v[1]},"
-            f.write(t+"\n")
+            t=f"{model.__class__.__name__},{m}_c"
+            if m!="predictions":
+                for v in hist.metrics_centralized[m]:
+                    t+=f",{v[1]}"
+                f.write(t+"\n")
+            else:
+                f.write(t)
+                for v in hist.metrics_centralized[m]:
+                    f.write(",[")
+                    np.savetxt(f, v[1],newline=" ")
+                    f.write("]")
+                f.write("\n")
     
 
 def write_stats_to_csv(results, clf_model):
