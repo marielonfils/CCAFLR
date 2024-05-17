@@ -41,7 +41,7 @@ AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None ) -> None:
+    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
         self.model = model
         self.trainset = trainset
@@ -57,6 +57,7 @@ class GNNClient(fl.client.NumPyClient):
         
         self.y_test= y_test
         self.filename = filename
+        self.dirname = dirname
         self.train_time = 0
         self.round = 0
         self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
@@ -140,7 +141,10 @@ class GNNClient(fl.client.NumPyClient):
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters, config)
         self.global_model = copy.deepcopy(self.model)
+        torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
+        self.round+=1
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
         GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
@@ -210,11 +214,16 @@ def main() -> None:
     id = args.partition
     filename = args.filepath
     dataset_name = args.dataset
+    dirname=""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
+        dirname = f"{filename}/{timestr2}/parms_{id}/"
         filename = f"{filename}/{timestr2}/client{id}_{timestr1}.csv"
     print("FFFNNN",filename)
+
+    if not os.path.isdir(dirname):
+        os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
 
     #Dataset Loading
@@ -253,7 +262,7 @@ def main() -> None:
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
     #Client
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
+    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
     with open(filename,'a') as f:

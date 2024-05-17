@@ -50,7 +50,7 @@ def evaluate_config(server_round: int):
     val_steps = 5 if server_round < 4 else 10
     return {"val_steps": val_steps}
 
-def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test):
+def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test,dirname):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
@@ -66,7 +66,9 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test):
         params_dict = zip(model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         model.load_state_dict(state_dict, strict=True)
-
+        if dirname is not None:
+            torch.save(model,f"{dirname}/model_server_{server_round}.pt")
+        
         test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
@@ -150,12 +152,17 @@ def main():
     dataset_name = args.dataset
     filename = args.filepath
     ce=args.noce
+    dirname=""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename1 = f"{filename}/{timestr2}_wo/model.txt"
+        dirname=f"{filename}/{timestr2}_wo/parms_{id}/"
         filename = f"{filename}/{timestr2}_wo/server{id}_{timestr1}.csv"
     print("FFFNNN",filename)
+
+    if not os.path.isdir(dirname):
+        os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
@@ -201,7 +208,7 @@ def main():
         min_fit_clients=n_clients,  # Minimum number of clients used for training at each round (override `fraction_fit`)
         min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round
         min_available_clients=n_clients,  # Minimum number of all available clients to be considered
-        evaluate_fn=get_evaluate_fn(model, test_dataset, id,y_test),  # Evaluation function used by the server without enc
+        evaluate_fn=get_evaluate_fn(model, test_dataset, id,y_test, dirname),  # Evaluation function used by the server without enc
         evaluate_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
         fit_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
         on_fit_config_fn=fit_config,  # Called before every round

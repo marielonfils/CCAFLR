@@ -36,7 +36,7 @@ AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None ) -> None:
+    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
         self.model = model
         self.trainset = trainset
@@ -44,8 +44,10 @@ class GNNClient(fl.client.NumPyClient):
         self.id=id
         self.y_test=y_test
         self.filename = filename
+        self.dirname = dirname
         self.train_time = 0
         self.global_model = model
+        self.round=0
       
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -59,9 +61,12 @@ class GNNClient(fl.client.NumPyClient):
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str]) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters)
         self.global_model = copy.deepcopy(self.model)
+        torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
+        self.round+=1
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         p = self.get_parameters(config={})
         l=loss["loss"]
@@ -129,12 +134,16 @@ def main() -> None:
     id = args.partition
     dataset_name = args.dataset
     filename = args.filepath
+    dirname = ""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
+        dirname = f"{filename}/{timestr2}_wo/parms_{id}/"
         filename = f"{filename}/{timestr2}_wo/client{id}_{timestr1}.csv"
     print("FFFNNN",filename)
 
+    if not os.path.isdir(dirname):
+        os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
@@ -172,7 +181,7 @@ def main() -> None:
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
     #Client
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
+    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
     with open(filename,'a') as f:
