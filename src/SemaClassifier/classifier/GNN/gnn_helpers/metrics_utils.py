@@ -99,7 +99,7 @@ def write_history_to_csv(hist,model, nrounds, file):
                 f.write(t)
                 for v in hist.metrics_centralized[m]:
                     f.write(",[")
-                    np.savetxt(f, v[1],newline=" ")
+                    np.savetxt(f, v[1],newline=" ",fmt='%.1i')
                     f.write("]")
                 f.write("\n")
     

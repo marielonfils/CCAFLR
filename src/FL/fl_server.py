@@ -122,7 +122,7 @@ def main():
         "--nrounds",
         type=int,
         default=3,
-        choices=range(1, 50),
+        choices=range(1, 100),
         required=False,
         help="Specifies the number of rounds of FL. \
         Picks partition 3 by default",
