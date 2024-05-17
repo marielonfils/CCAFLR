@@ -206,6 +206,7 @@ def main():
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename1 = f"{filename}/{timestr2}/model.txt"
+        filename2 = f"{filename}/{timestr2}/setup.txt"
         filename = f"{filename}/{timestr2}/server{id}_{timestr1}.csv"
     print("FFFNNN",filename)
     
@@ -240,7 +241,12 @@ def main():
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
     if filename is not None:
         metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
-
+        with open(filename2,"w") as f:
+          f.write("n_clients: " + str(n_clients) + "\n")
+          f.write("nrounds: " + str(nrounds) + "\n")
+          f.write("dataset_name: " + str(dataset_name) + "\n")
+          f.write("methodo: " + str(methodo) + "\n")
+          f.write("threshold: " + str(threshold) + "\n")
     
     # FL strategy
     strategy = fl.server.strategy.MKFedAvg(

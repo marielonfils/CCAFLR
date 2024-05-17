@@ -107,10 +107,10 @@ class GNNClient(fl.client.NumPyClient):
 
     def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
-        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(gradient)
+        #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
+        return AESCipher(AESKEY).encrypt(params_model2)
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -136,6 +136,13 @@ class GNNClient(fl.client.NumPyClient):
         return self.get_parameters(config={}), len(self.trainset), loss    
     
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
+        if parameters != None and len(parameters) == 1:
+            self.global_model = copy.deepcopy(self.model)
+            m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+            self.train_time=loss["train_time"]
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
+            GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
+            return self.get_parameters(config={}), len(self.trainset), loss
         if flat:
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters, config)
@@ -159,6 +166,8 @@ class GNNClient(fl.client.NumPyClient):
     
     def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
     ) -> Tuple[float, int, Dict]:
+        if parameters != None and len(parameters) == 1:
+            return 0.0,len(self.testset),{}
         if reshape:
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
@@ -202,7 +211,7 @@ def main() -> None:
         default = "",
         type=str,
         required=False,
-        help="Specifies the path for te dataset"
+        help="Specifies the path for the dataset"
     )
 
     args = parser.parse_args()

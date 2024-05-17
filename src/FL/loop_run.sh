@@ -4,7 +4,7 @@ declare -i nrounds="20"
 filepath="./results"
 dataset="split_scdg1"
 thresholds=('-0.1' '-0.05' '-0.01')
-methodos=('delete' 'delete_one')
+methodos=('set_aside','set_aside2')
 
 for methodo in "${methodos[@]}"
 do

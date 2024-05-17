@@ -57,12 +57,13 @@ class CEServer(fl.client.NumPyClient):
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             return float(accuracy)
         l = len(S)
-        params_model = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        #params_model = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         gradient_sum = self.gradients[S[0]]
         for i in range(1,l):
             gradient_sum = [gradient_sum[j] + self.gradients[S[i]][j] for j in range(len(gradient_sum))]
-        gradient_sum = [x/l for x in gradient_sum]
-        parameters = [params_model[k] + gradient_sum[k] for k in range(len(gradient_sum))]
+        #gradient_sum = [x/l for x in gradient_sum]
+        #parameters = [params_model[k] + gradient_sum[k] for k in range(len(gradient_sum))]
+        parameters = [x/l for x in gradient_sum]
         temp_model = copy.deepcopy(self.model)
         params_dict = zip(temp_model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})

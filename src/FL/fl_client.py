@@ -57,7 +57,10 @@ class GNNClient(fl.client.NumPyClient):
         self.model.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str]) -> Tuple[List[np.ndarray], int, Dict]:
-        self.set_parameters(parameters)
+        if "wait" in config and config["wait"] == "no_update":
+                pass
+        else:
+            self.set_parameters(parameters)
         self.global_model = copy.deepcopy(self.model)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
@@ -82,11 +85,10 @@ class GNNClient(fl.client.NumPyClient):
 
     def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
-        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(gradient)
-    
+        #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
+        return AESCipher(AESKEY).encrypt(params_model2)
     
     
 def main() -> None:
@@ -122,7 +124,7 @@ def main() -> None:
         default = "",
         type=str,
         required=False,
-        help="Specifies the path for te dataset"
+        help="Specifies the path for the dataset"
     )
     
     args = parser.parse_args()
