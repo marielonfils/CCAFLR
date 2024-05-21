@@ -37,7 +37,7 @@ DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
-AESkey = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
+AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -107,10 +107,10 @@ class GNNClient(fl.client.NumPyClient):
 
     def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
-        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESkey).encrypt(gradient)
+        #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
+        return AESCipher(AESKEY).encrypt(params_model2)
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -131,7 +131,7 @@ class GNNClient(fl.client.NumPyClient):
         return np.array(p,dtype=object)
     
     def update_random_parameters(self):
-        print("RANDOM CLIENT")
+        print("RANDOM CLIENT " + str(self.id))
         parameters = self.get_parameters(config={})
         for i in range(len(parameters)):
             sub_array = parameters[i]
@@ -233,7 +233,7 @@ def main() -> None:
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
-        filename = f"{filename}/{timestr2}/client{id}_{timestr1}.csv"
+        filename = f"{filename}/{timestr2}/random_client{id}_{timestr1}.csv"
     print("FFFNNN",filename)
 
 
