@@ -250,13 +250,14 @@ def main():
         min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round 
         min_available_clients=n_clients,#2,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id,y_test, dirname),  # Evaluation function used by the server 
-        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
-        fit_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
+        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
+        fit_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
         on_fit_config_fn=fit_config,  # Called before every round
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),
     )
-
+    
+    shapes=[x.cpu().numpy().shape for x in model.state_dict().values()]
     client_manager = CEClientManager()
     # import pdb; pdb.set_trace()
     hist=fl.server.start_server(
@@ -270,7 +271,8 @@ def main():
             Path("./FL/.cache/certificates/server.pem").read_bytes(),
             Path("./FL/.cache/certificates/server.key").read_bytes(),),
         enc=True,
-        contribution=ce
+        contribution=ce,
+        shape=shapes
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)

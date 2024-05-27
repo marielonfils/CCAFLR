@@ -209,8 +209,8 @@ def main():
         min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round
         min_available_clients=n_clients,  # Minimum number of all available clients to be considered
         evaluate_fn=get_evaluate_fn(model, test_dataset, id,y_test, dirname),  # Evaluation function used by the server without enc
-        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
-        fit_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time"]),
+        evaluate_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
+        fit_metrics_aggregation_fn=get_aggregate_evaluate_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
         on_fit_config_fn=fit_config,  # Called before every round
         on_evaluate_config_fn=evaluate_config,  # Called before evaluation rounds
         initial_parameters=fl.common.ndarrays_to_parameters(model_parameters),

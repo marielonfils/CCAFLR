@@ -100,7 +100,6 @@ class GNNClient(fl.client.NumPyClient):
     
     def get_parms_enc(self, train=False) -> List[np.ndarray]:
         parms =  self.get_parameters_flat(config={})
-        self.round += 1
         parms_flat = np.hstack(np.array(parms,dtype=object))
         if train:
             parms_flat = parms_flat#*len(self.trainset)
@@ -136,7 +135,7 @@ class GNNClient(fl.client.NumPyClient):
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         return self.get_parameters(config={}), len(self.trainset), loss    
     
-    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
+    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str]=None,flat=True) -> Tuple[List[np.ndarray], int, Dict]:
         if flat:
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters, config)
@@ -161,7 +160,7 @@ class GNNClient(fl.client.NumPyClient):
         #GNN_script.cprint(f"{self.id},{accuracy},{loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
     
-    def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
+    def evaluate_enc(self, parameters: List[np.ndarray], config=None, reshape = False
     ) -> Tuple[float, int, Dict]:
         if reshape:
             parameters = self.reshape_parameters(parameters)

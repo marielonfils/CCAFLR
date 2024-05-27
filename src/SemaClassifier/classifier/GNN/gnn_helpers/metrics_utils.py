@@ -102,6 +102,11 @@ def write_history_to_csv(hist,model, nrounds, file):
                     np.savetxt(f, v[1],newline=" ",fmt='%.1i')
                     f.write("]")
                 f.write("\n")
+        for m in hist.round_times:
+            t=f"{model.__class__.__name__},{m}_time"
+            for v in hist.round_times[m]:
+                t+=f",{v[1]}"
+            f.write(t+"\n")
     
 
 def write_stats_to_csv(results, clf_model):
