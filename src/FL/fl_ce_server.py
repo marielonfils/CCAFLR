@@ -34,7 +34,7 @@ AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, testset, y_test, id, enc, filename) -> None:
+    def __init__(self, model, testset, y_test, id, enc, filename, filename2) -> None:
         super().__init__()
         self.t = time.time()
         self.model = model
@@ -47,6 +47,7 @@ class CEServer(fl.client.NumPyClient):
         self.round = 0
         self.enc = enc
         self.filename=filename
+        self.filename2=filename2
          
     def identify(self):
         return True
@@ -70,7 +71,7 @@ class CEServer(fl.client.NumPyClient):
         temp_model.load_state_dict(state_dict, strict=True)
         test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
-        return float(accuracy)
+        return float(bal_acc)
 
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
@@ -101,14 +102,50 @@ class CEServer(fl.client.NumPyClient):
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
 
+    def accuracy_client(self, gradients):
+        decrypt = [AESCipher(AESKEY).decrypt(gradient) for gradient in gradients]
+        gradients = {d[0]:self.reshape_parameters(d[1:]) for d in decrypt}
+        accuracies = {}
+        for c in gradients:
+            parameters = gradients[c]
+            temp_model = copy.deepcopy(self.model)
+            params_dict = zip(temp_model.state_dict().keys(), parameters)
+            state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
+            temp_model.load_state_dict(state_dict, strict=True)
+            test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+            accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
+            accuracies[c] = float(bal_acc)
+            
+        l = len(gradients)
+        gradient_sum = gradients[0]
+        for i in range(1,l):
+            gradient_sum = [gradient_sum[j] + self.gradients[i][j] for j in range(len(gradient_sum))]
+        parameters = [x/l for x in gradient_sum]
+        temp_model = copy.deepcopy(self.model)
+        params_dict = zip(temp_model.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
+        temp_model.load_state_dict(state_dict, strict=True)
+        test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
+        
+        with open(self.filename2,"a") as f:
+            for i in range(len(gradients)):
+                f.write(str(accuracies[i]))
+                f.write(",")
+            f.write(str(float(bal_acc)))
+            f.write("\n")
+        return
+        
     def get_contributions(self, gradients):
+        self.accuracy_client(gradients)
         self.round += 1
         t1 = time.time()
-        self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
+        self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)[1:]) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
         sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
         util = {S:self.utility(S=S) for S in sets}
+        print(util)
         SVs = [0 for i in range(N)]
         perms = list(permutations(idxs))
         for idx in idxs:
@@ -144,7 +181,7 @@ class CEServer(fl.client.NumPyClient):
         s = list(iterable)
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-    def get_contributions_gtg(self, gradients):  #GTG shapley implem
+    def get_contributions_gtg(self, gradients):  #GTG shapley implem from https://github.com/liuzelei13/GTG-Shapley/tree/50879e8905aaf5f4d408961b69523cacc33deb47
         t1 = time.time()
         self.gradients = self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
         self.Contribution_records=[]
@@ -246,6 +283,7 @@ def main() -> None:
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
+        filename2 = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}_accuracy_client.csv"
         filename = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}.csv"
     print("FFFNNN",filename)
 
@@ -279,7 +317,7 @@ def main() -> None:
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
     #Starting client
-    client = CEServer(model, test_dataset, y_test, id, enc, filename)
+    client = CEServer(model, test_dataset, y_test, id, enc, filename,filename2)
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
 
 if __name__ == "__main__":

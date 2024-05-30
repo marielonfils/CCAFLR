@@ -86,7 +86,7 @@ class GNNClient(fl.client.NumPyClient):
     def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
         #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
-        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
         return AESCipher(AESKEY).encrypt(params_model2)
     
