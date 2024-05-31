@@ -108,7 +108,7 @@ class GNNClient(fl.client.NumPyClient):
     def get_gradients(self):
         print("##########   COMPUTING GRADIENT  #################")
         #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
-        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
         return AESCipher(AESKEY).encrypt(params_model2)
     
@@ -139,31 +139,40 @@ class GNNClient(fl.client.NumPyClient):
                 for j in range(len(parameters[i])):
                     if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
                         for k in range(len(parameters[i][j])):
-                            random_float = random.gauss(0.0,0.2)
+                            random_float = random.gauss(0.0,0.4)
                             parameters[i][j][k] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j][k]+random_float))
                     else:
-                        random_float = random.gauss(0.0,0.2)
+                        random_float = random.gauss(0.0,0.4)
                         parameters[i][j] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i][j]+random_float))
             else:
-                random_float = random.gauss(0.0,0.2)
+                random_float = random.gauss(0.0,0.4)
                 parameters[i] = max(np.float32(-1.0), min(np.float32(1.0), parameters[i]+random_float))
         self.set_parameters(parameters,1)
         return
         
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
-        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        self.update_random_parameters()
-        return self.get_parameters(config={}), len(self.trainset), {}    
+        if self.round >10:
+            self.update_random_parameters()
+            return self.get_parameters(config={}), len(self.trainset), {}
+        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        return self.get_parameters(config={}), len(self.trainset), loss    
+        
     
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
-        if flat:
-            parameters = self.reshape_parameters(parameters)
-        self.set_parameters(parameters, config)
+        if not(parameters != None and len(parameters) == 1):
+            if flat:
+                parameters = self.reshape_parameters(parameters)
+            self.set_parameters(parameters, config)
+        if self.round >10:
+            self.update_random_parameters()
+            return self.get_parameters(config={}), len(self.trainset), {}    
         self.global_model = copy.deepcopy(self.model)
-        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        self.update_random_parameters()
-        return self.get_parameters(config={}), len(self.trainset), {}
+        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        self.train_time=loss["train_time"]
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
+        GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
+        return self.get_parameters(config={}), len(self.trainset), loss
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
@@ -224,12 +233,20 @@ def main() -> None:
         required=False,
         help="Specifies the path for te dataset"
     )
+    parser.add_argument(
+        "--modelpath",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the path for the model"
+    )
 
     args = parser.parse_args()
     n_clients = args.nclients
     id = args.partition
     filename = args.filepath
     dataset_name = args.dataset
+    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -265,6 +282,9 @@ def main() -> None:
     residual = False
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
+    if model_path is not None:
+        model = torch.load(model_path)
+        print(model)
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())

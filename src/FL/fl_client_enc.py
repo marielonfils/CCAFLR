@@ -136,16 +136,10 @@ class GNNClient(fl.client.NumPyClient):
         return self.get_parameters(config={}), len(self.trainset), loss    
     
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
-        if parameters != None and len(parameters) == 1:
-            self.global_model = copy.deepcopy(self.model)
-            m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-            self.train_time=loss["train_time"]
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
-            GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
-            return self.get_parameters(config={}), len(self.trainset), loss
-        if flat:
-            parameters = self.reshape_parameters(parameters)
-        self.set_parameters(parameters, config)
+        if not(parameters != None and len(parameters) == 1):
+            if flat:
+                parameters = self.reshape_parameters(parameters)
+            self.set_parameters(parameters, config)
         self.global_model = copy.deepcopy(self.model)
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         self.train_time=loss["train_time"]
@@ -213,12 +207,20 @@ def main() -> None:
         required=False,
         help="Specifies the path for the dataset"
     )
+    parser.add_argument(
+        "--modelpath",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the path for the model"
+    )
 
     args = parser.parse_args()
     n_clients = args.nclients
     id = args.partition
     filename = args.filepath
     dataset_name = args.dataset
+    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -253,8 +255,11 @@ def main() -> None:
     drop_ratio = 0.5
     residual = False
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
-    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    
+    if model_path is not None:
+        model = torch.load(model_path,map_location=DEVICE)
+        model.eval()
+    else:
+        model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")

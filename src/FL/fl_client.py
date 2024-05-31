@@ -126,19 +126,26 @@ def main() -> None:
         required=False,
         help="Specifies the path for the dataset"
     )
+    parser.add_argument(
+        "--modelpath",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the path for the model"
+    )
     
     args = parser.parse_args()
     n_clients = args.nclients
     id = args.partition
     dataset_name = args.dataset
     filename = args.filepath
+    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename = f"{filename}/{timestr2}_wo/client{id}_{timestr1}.csv"
     print("FFFNNN",filename)
-
-
+    
     #Dataset Loading
     if "scdg1" in dataset_name:
         ds_path = "./databases/scdg1"
@@ -168,6 +175,8 @@ def main() -> None:
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
+    if model_path is not None:
+        model = torch.load(model_path)
     #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")
