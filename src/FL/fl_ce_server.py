@@ -119,7 +119,7 @@ class CEServer(fl.client.NumPyClient):
         l = len(gradients)
         gradient_sum = gradients[0]
         for i in range(1,l):
-            gradient_sum = [gradient_sum[j] + self.gradients[i][j] for j in range(len(gradient_sum))]
+            gradient_sum = [gradient_sum[j] + gradients[i][j] for j in range(len(gradient_sum))]
         parameters = [x/l for x in gradient_sum]
         temp_model = copy.deepcopy(self.model)
         params_dict = zip(temp_model.state_dict().keys(), parameters)
