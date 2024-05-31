@@ -5,6 +5,7 @@ filepath="./results"
 dataset="split_scdg1"
 methodo=""
 threshold="0.0"
+model="model_server_60.py"
 
 echo "Starting server"
 python3 ./FL/fl_server_enc.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath} --dataset=${dataset} --methodo=${methodo} --threshold=${threshold}&
@@ -15,7 +16,7 @@ python3 ./FL/fl_ce_server.py --enc --nclients=${nclients} --filepath=${filepath}
 
 for ((i=0; i<nclients-1; i++)); do
     echo "Starting client $i"
-    python3 ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset}&
+    python3 ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
 done
 
 echo "Starting client random"
