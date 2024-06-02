@@ -209,7 +209,6 @@ def main() -> None:
     )
     parser.add_argument(
         "--modelpath",
-        default = "",
         type=str,
         required=False,
         help="Specifies the path for the model"

@@ -193,13 +193,6 @@ def main():
         required=False,
         help="Specifies the threshold to delete clients"
     )
-    parser.add_argument(
-        "--modelpath",
-        default = "",
-        type=str,
-        required=False,
-        help="Specifies the path for the model"
-    )
     
     args = parser.parse_args()
     n_clients = args.nclients
@@ -209,7 +202,6 @@ def main():
     dataset_name = args.dataset
     methodo = args.methodo
     threshold = args.threshold
-    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -246,8 +238,6 @@ def main():
     residual = False
     # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    if model_path is not None:
-        model = torch.load(model_path)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
     if filename is not None:
         metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset)})
