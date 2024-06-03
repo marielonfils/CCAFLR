@@ -118,7 +118,7 @@ class CEServer(fl.client.NumPyClient):
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             accuracies[c] = float(bal_acc)
             
-        g_values = gradients.values()
+        g_values = list(gradients.values())
         l = len(g_values)
         gradient_sum = g_values[0]
         for i in range(1,l):
