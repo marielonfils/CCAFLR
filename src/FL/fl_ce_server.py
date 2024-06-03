@@ -140,6 +140,13 @@ class CEServer(fl.client.NumPyClient):
         return
         
     def get_contributions(self, gradients):
+        if self.round == 0:
+            with open(self.filename2,"a") as f:
+                s = ""
+                for i in range(8):
+                    s += str(i)+","
+                s += "all \n"
+                f.write(s)
         self.accuracy_client(gradients)
         self.round += 1
         t1 = time.time()
@@ -287,12 +294,6 @@ def main() -> None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename2 = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}_accuracy_client.csv"
-        with open(filename2,"a") as f:
-            s = ""
-            for i in range(8):
-                s += str(i)+","
-            s += "all \n"
-            f.write(s)
         filename = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}.csv"
     print("FFFNNN",filename)
 
