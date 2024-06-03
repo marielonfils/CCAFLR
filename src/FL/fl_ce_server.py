@@ -107,7 +107,7 @@ class CEServer(fl.client.NumPyClient):
     def accuracy_client(self, gradients):
         decrypt = [AESCipher(AESKEY).decrypt(gradient) for gradient in gradients]
         gradients = {d[0]:self.reshape_parameters(d[1:]) for d in decrypt}
-        accuracies = {}
+        accuracies = {i:0 for i in range(8)}
         for c in gradients:
             parameters = gradients[c]
             temp_model = copy.deepcopy(self.model)
@@ -118,10 +118,11 @@ class CEServer(fl.client.NumPyClient):
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             accuracies[c] = float(bal_acc)
             
-        l = len(gradients)
-        gradient_sum = gradients[0]
+        g_values = gradients.values()
+        l = len(g_values)
+        gradient_sum = g_values[0]
         for i in range(1,l):
-            gradient_sum = [gradient_sum[j] + gradients[i][j] for j in range(len(gradient_sum))]
+            gradient_sum = [gradient_sum[j] + g_values[i][j] for j in range(len(gradient_sum))]
         parameters = [x/l for x in gradient_sum]
         temp_model = copy.deepcopy(self.model)
         params_dict = zip(temp_model.state_dict().keys(), parameters)
@@ -131,7 +132,7 @@ class CEServer(fl.client.NumPyClient):
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         
         with open(self.filename2,"a") as f:
-            for i in range(len(gradients)):
+            for i in range(len(accuracies)):
                 f.write(str(accuracies[i]))
                 f.write(",")
             f.write(str(float(bal_acc)))
@@ -286,9 +287,14 @@ def main() -> None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename2 = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}_accuracy_client.csv"
+        with open(filename2,"a") as f:
+            s = ""
+            for i in range(8):
+                s += str(i)+","
+            s += "all \n"
+            f.write(s)
         filename = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}.csv"
     print("FFFNNN",filename)
-
 
     #Dataset Loading
     if "scdg1" in dataset_name:

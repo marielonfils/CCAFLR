@@ -283,7 +283,6 @@ def main() -> None:
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     if model_path is not None:
         model = torch.load(model_path)
-        print(model)
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())

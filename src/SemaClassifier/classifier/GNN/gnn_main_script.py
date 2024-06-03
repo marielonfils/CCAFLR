@@ -31,6 +31,7 @@ def init_split_dataset(mapping, reversed_mapping, n_clients, id):
     else:
         path = "./databases/client"+str(id+1)
     families = os.listdir(path)
+    families = ['wabot', 'dinwod', 'gepys', 'berbew', 'ceeinject', 'benjamin', 'mira', 'sillyp2p', 'upatre', 'ganelp', 'sfone', 'wacatac', 'small']
     dataset, label, fam_idx, fam_dict = dataset_utils.init_dataset(path, families, reversed_mapping, [], {}, False)
     if n_clients == id:
         y_test = []
