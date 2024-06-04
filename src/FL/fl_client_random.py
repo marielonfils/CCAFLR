@@ -46,6 +46,7 @@ class GNNClient(fl.client.NumPyClient):
         self.filename = filename
         self.train_time = 0
         self.global_model = model
+        self.round = 0
       
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -84,6 +85,7 @@ class GNNClient(fl.client.NumPyClient):
         if self.round > 10:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}
+        self.round += 1
         self.global_model = copy.deepcopy(self.model)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
