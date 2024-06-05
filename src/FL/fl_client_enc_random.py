@@ -187,6 +187,8 @@ class GNNClient(fl.client.NumPyClient):
     
     def evaluate_enc(self, parameters: List[np.ndarray], reshape = False
     ) -> Tuple[float, int, Dict]:
+        if parameters != None and len(parameters) == 1:
+            return 0.0,len(self.testset),{}
         if reshape:
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
