@@ -139,20 +139,20 @@ class GNNClient(fl.client.NumPyClient):
                 for j in range(len(parameters[i])):
                     if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
                         for k in range(len(parameters[i][j])):
-                            random_float = random.gauss(0.0,0.04)
+                            random_float = random.gauss(0.0,0.02)
                             parameters[i][j][k] = parameters[i][j][k]+random_float
                     else:
-                        random_float = random.gauss(0.0,0.04)
+                        random_float = random.gauss(0.0,0.02)
                         parameters[i][j] = parameters[i][j]+random_float
             else:
-                random_float = random.gauss(0.0,0.04)
+                random_float = random.gauss(0.0,0.02)
                 parameters[i] = parameters[i]+random_float
         self.set_parameters(parameters,1)
         return
         
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
-        if self.round > 3 and self.round <= 6:
+        if self.round > 3:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
@@ -164,7 +164,7 @@ class GNNClient(fl.client.NumPyClient):
             if flat:
                 parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters, config)
-        if self.round > 3 and self.round <= 6:
+        if self.round > 3:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}    
         self.global_model = copy.deepcopy(self.model)

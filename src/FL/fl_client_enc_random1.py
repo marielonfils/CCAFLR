@@ -152,7 +152,7 @@ class GNNClient(fl.client.NumPyClient):
         
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
-        if self.round > 3 and self.round <= 6:
+        if self.round > 3:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
@@ -164,7 +164,7 @@ class GNNClient(fl.client.NumPyClient):
             if flat:
                 parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters, config)
-        if self.round > 3 and self.round <= 6:
+        if self.round > 3:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}    
         self.global_model = copy.deepcopy(self.model)
