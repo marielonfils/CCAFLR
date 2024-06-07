@@ -25,7 +25,7 @@ import copy
 import time
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
-
+import random
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
