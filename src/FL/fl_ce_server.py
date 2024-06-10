@@ -98,7 +98,9 @@ class CEServer(fl.client.NumPyClient):
         if self.enc:
             parameters = self.reshape_parameters(parameters)
         if "check" in config and config["check"] == False:
+            print("CHECK IS FALSE")
             return float(0.0), len(self.testset), {"accuracy": float(0.0)}
+        print("CHECK IS TRUE")
         self.set_parameters(parameters)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
