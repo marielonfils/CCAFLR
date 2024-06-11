@@ -152,12 +152,12 @@ class CEServer(fl.client.NumPyClient):
         self.accuracy_client(gradients)
         self.round += 1
         t1 = time.time()
+        mapping = {self.reshape_parameters(AESCipher(AESKEY).decrypt(gradients[i])[0]):i for i in range(len(gradients))}
         self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)[1:]) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
         sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
         util = {S:self.utility(S=S) for S in sets}
-        print(util)
         SVs = [0 for i in range(N)]
         perms = list(permutations(idxs))
         for idx in idxs:
@@ -170,9 +170,12 @@ class CEServer(fl.client.NumPyClient):
             SVs[idx] = SV/len(perms)
         t2 = time.time()
         c=["original_shapley",str(self.model.__class__.__name__),N, t2-t1]
+        SV_sorted = [0 for i in range(N)]
+        for c in mapping:
+            SV_sorted[c] = SVs[mapping[c]]
         c.extend(SVs)
         metrics_utils.write_contribution(c, self.filename)
-        self.get_contributions_gtg(gradients)
+        #self.get_contributions_gtg(gradients)
         print("Original shapley","time: "+str(t2-t1),SVs)
         return SVs
         

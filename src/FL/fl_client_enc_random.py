@@ -100,6 +100,7 @@ class GNNClient(fl.client.NumPyClient):
     def get_parms_enc(self, train=False) -> List[np.ndarray]:
         parms =  self.get_parameters_flat(config={})
         self.round += 1
+        print("id:",self.id,"round:",self.round, "ROUND +1")
         parms_flat = np.hstack(np.array(parms,dtype=object))
         if train:
             parms_flat = parms_flat#*len(self.trainset)
@@ -139,13 +140,13 @@ class GNNClient(fl.client.NumPyClient):
                 for j in range(len(parameters[i])):
                     if isinstance(parameters[i][j], np.ndarray) and parameters[i][j].ndim > 0:
                         for k in range(len(parameters[i][j])):
-                            random_float = random.gauss(0.0,0.04)
+                            random_float = random.gauss(0.0,0.05)
                             parameters[i][j][k] = parameters[i][j][k]+random_float
                     else:
-                        random_float = random.gauss(0.0,0.04)
+                        random_float = random.gauss(0.0,0.05)
                         parameters[i][j] = parameters[i][j]+random_float
             else:
-                random_float = random.gauss(0.0,0.04)
+                random_float = random.gauss(0.0,0.05)
                 parameters[i] = parameters[i]+random_float
         self.set_parameters(parameters,1)
         return

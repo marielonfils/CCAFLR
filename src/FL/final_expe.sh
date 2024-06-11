@@ -3,7 +3,7 @@ declare -i nrounds="20"
 filepath="./results"
 dataset="split_scdg1"
 model="models/model_server_30.pt"
-thresholds=('-0.1' '-0.05' '-0.01')
+thresholds=('-0.05')
 methodos=('delete' 'delete_one' 'set_aside')
 
 for methodo in "${methodos[@]}"
@@ -28,8 +28,8 @@ do
     echo "Starting client random 1"
     python3 ./FL/fl_client_enc_random1.py --nclients=${nclients} --partition=6 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
     
-    echo "Starting client random 2"
-    python3 ./FL/fl_client_enc_random2.py --nclients=${nclients} --partition=7 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
+    echo "Starting second client random 1"
+    python3 ./FL/fl_client_enc_random1.py --nclients=${nclients} --partition=7 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
     
     # This will allow you to use CTRL+C to stop all background processes
     trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM
