@@ -171,9 +171,9 @@ class CEServer(fl.client.NumPyClient):
         t2 = time.time()
         c=["original_shapley",str(self.model.__class__.__name__),N, t2-t1]
         SV_sorted = [0 for i in range(N)]
-        for c in mapping:
-            SV_sorted[c] = SVs[mapping[c]]
-        c.extend(SVs)
+        for m in mapping:
+            SV_sorted[m] = SVs[mapping[m]]
+        c.extend(SV_sorted)
         metrics_utils.write_contribution(c, self.filename)
         #self.get_contributions_gtg(gradients)
         print("Original shapley","time: "+str(t2-t1),SVs)
