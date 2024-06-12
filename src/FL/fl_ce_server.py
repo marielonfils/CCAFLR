@@ -152,7 +152,7 @@ class CEServer(fl.client.NumPyClient):
         self.accuracy_client(gradients)
         self.round += 1
         t1 = time.time()
-        mapping = {self.reshape_parameters(AESCipher(AESKEY).decrypt(gradients[i])[0]):i for i in range(len(gradients))}
+        mapping = {AESCipher(AESKEY).decrypt(gradients[i])[0]:i for i in range(len(gradients))}
         self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)[1:]) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
