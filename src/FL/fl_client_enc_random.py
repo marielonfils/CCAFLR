@@ -99,14 +99,13 @@ class GNNClient(fl.client.NumPyClient):
     
     def get_parms_enc(self, train=False) -> List[np.ndarray]:
         parms =  self.get_parameters_flat(config={})
-        self.round += 1
-        print("id:",self.id,"round:",self.round, "ROUND +1")
         parms_flat = np.hstack(np.array(parms,dtype=object))
         if train:
             parms_flat = parms_flat#*len(self.trainset)
         return self.context,self.encrypt(parms_flat)
 
     def get_gradients(self):
+        self.round += 1
         print("##########   COMPUTING GRADIENT  #################")
         #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
@@ -153,7 +152,7 @@ class GNNClient(fl.client.NumPyClient):
         
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
         self.set_parameters(parameters, config["N"])
-        if self.round > 3 and self.round <= 6:
+        if self.round > 2 and self.round <= 6:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
@@ -165,7 +164,7 @@ class GNNClient(fl.client.NumPyClient):
             if flat:
                 parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters, config)
-        if self.round > 3 and self.round <= 6:
+        if self.round > 2 and self.round <= 6:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}    
         self.global_model = copy.deepcopy(self.model)

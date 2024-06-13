@@ -85,7 +85,6 @@ class GNNClient(fl.client.NumPyClient):
         if self.round > 10:
             self.update_random_parameters()
             return self.get_parameters(config={}), len(self.trainset), {}
-        self.round += 1
         self.global_model = copy.deepcopy(self.model)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
@@ -107,6 +106,7 @@ class GNNClient(fl.client.NumPyClient):
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
+        self.round += 1
         print("##########   COMPUTING GRADIENT  #################")
         #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
         params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
