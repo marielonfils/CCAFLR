@@ -145,7 +145,7 @@ class CEServer(fl.client.NumPyClient):
         if self.round == 0:
             with open(self.filename2,"a") as f:
                 s = ""
-                for i in range(8):
+                for i in range(self.id):
                     s += str(i)+","
                 s += "all \n"
                 f.write(s)
@@ -153,7 +153,6 @@ class CEServer(fl.client.NumPyClient):
         self.round += 1
         t1 = time.time()
         mapping = {AESCipher(AESKEY).decrypt(gradients[i])[0]:i for i in range(len(gradients))}
-        print(mapping)
         self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)[1:]) for gradient in gradients]
         N = len(gradients)
         idxs = [i for i in range(N)]
@@ -171,11 +170,9 @@ class CEServer(fl.client.NumPyClient):
             SVs[idx] = SV/len(perms)
         t2 = time.time()
         c=["original_shapley",str(self.model.__class__.__name__),N, t2-t1]
-        SV_sorted = [0 for i in range(8)]
+        SV_sorted = [0 for i in range(self.id)]
         for m in mapping:
             SV_sorted[m] = SVs[mapping[m]]
-        print(SVs)
-        print(SV_sorted)
         c.extend(SV_sorted)
         metrics_utils.write_contribution(c, self.filename)
         #self.get_contributions_gtg(gradients)
