@@ -4,7 +4,7 @@ filepath="./results"
 dataset="split_scdg1"
 model="models/model_server_30.pt"
 thresholds=('-0.05')
-methodos=('delete' 'delete_one' 'set_aside')
+methodos=('' 'delete' 'delete_one' 'set_aside')
 
 for methodo in "${methodos[@]}"
 do
@@ -17,19 +17,15 @@ do
     echo "Starting CE server"
     python3 ./FL/fl_ce_server.py --enc --nclients=${nclients} --filepath=${filepath} --dataset=${dataset}&
 
-    for ((i=0; i<nclients-3; i++)); do
+    for ((i=0; i<nclients-4; i++)); do
         echo "Starting client $i"
         python3 ./FL/fl_client_enc.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
     done
-
-    echo "Starting client random"
-    python3 ./FL/fl_client_enc_random.py --nclients=${nclients} --partition=5 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
     
-    echo "Starting client random 1"
-    python3 ./FL/fl_client_enc_random1.py --nclients=${nclients} --partition=6 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
-    
-    echo "Starting second client random 1"
-    python3 ./FL/fl_client_enc_random1.py --nclients=${nclients} --partition=7 --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
+    for ((i=4; i<nclients; i++)); do
+        echo "Starting random client $i"
+        python3 ./FL/fl_client_enc_random1.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} --modelpath=${model}&
+    done
     
     # This will allow you to use CTRL+C to stop all background processes
     trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM
