@@ -106,10 +106,16 @@ class GNNClient(fl.client.NumPyClient):
 
     def get_gradients(self):
         self.round += 1
-        print("##########   COMPUTING GRADIENT  #################")
-        #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
+        if self.round == 3 and self.id in [0,1]:
+            os.rename("./databases/client"+str(self.id+1),"./databases/old_client"+str(self.id+1))
+            os.rename("./databases/shuffle_client"+str(self.id+1),"./databases/client"+str(self.id+1))
+            mapping = read_mapping("./mapping_scdg1.txt")
+            reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
+            n_clients = 8
+            self.trainset, y_full_train, self.testset, self.y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, self.id)
+            
+        print("##########   COMPUTING GRADIENT ROUND " + str(self.round) + " #################")
         params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
         return AESCipher(AESKEY).encrypt(params_model2)
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
