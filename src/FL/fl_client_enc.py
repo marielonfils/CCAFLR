@@ -31,6 +31,7 @@ import tenseal as ts
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import json
 import time
+import shutil
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
@@ -107,8 +108,8 @@ class GNNClient(fl.client.NumPyClient):
     def get_gradients(self):
         self.round += 1
         if self.round == 3 and self.id in [0,1]:
-            os.rename("./databases/client"+str(self.id+1),"./databases/old_client"+str(self.id+1))
-            os.rename("./databases/shuffle_client"+str(self.id+1),"./databases/client"+str(self.id+1))
+            shutil.move("./databases/client"+str(self.id+1),"./databases/old_client"+str(self.id+1))
+            shutil.move("./databases/shuffle_client"+str(self.id+1),"./databases/client"+str(self.id+1))
             mapping = read_mapping("./mapping_scdg1.txt")
             reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
             n_clients = 8
