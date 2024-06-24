@@ -25,14 +25,15 @@ import copy
 import time
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
-
+import secrets
+import string
+import rsa
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
 
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -46,7 +47,13 @@ class GNNClient(fl.client.NumPyClient):
         self.filename = filename
         self.train_time = 0
         self.global_model = model
-      
+        self.round = 0
+        self.publickey = ""
+    
+    def set_public_key(self, rsa_public_key):
+        self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
+        return
+  
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
     
@@ -84,11 +91,14 @@ class GNNClient(fl.client.NumPyClient):
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
-        print("##########   COMPUTING GRADIENT  #################")
-        #params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
-        params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        #gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(params_model2)
+        self.round += 1
+        print("##########   COMPUTING GRADIENT ROUND " + str(self.round) + " #################")
+        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        characters = string.ascii_letters + string.digits + string.punctuation
+        AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
+        encrypted_parameters = AESCipher(AESKEY).encrypt(parameters)
+        encrypted_key = rsa.encrypt(AESKEY.encode('utf8'), self.publickey)
+        return encrypted_key + encrypted_parameters
     
     
 def main() -> None:

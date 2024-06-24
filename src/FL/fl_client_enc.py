@@ -32,12 +32,14 @@ import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import json
 import time
 import shutil
+import secrets
+import string
+import rsa
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
@@ -61,9 +63,9 @@ class GNNClient(fl.client.NumPyClient):
         self.train_time = 0
         self.round = 0
         self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
+        self.publickey = ""
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
-
         if pk is None: #generate random a for pk
             self.context = ts.context(ts.SCHEME_TYPE.MK_CKKS,poly_mod_degree,-1,coeff_mod_bit_sizes)
         else: #reuse a for pk
@@ -105,19 +107,19 @@ class GNNClient(fl.client.NumPyClient):
             parms_flat = parms_flat#*len(self.trainset)
         return self.context,self.encrypt(parms_flat)
 
+    def set_public_key(self, rsa_public_key):
+        self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
+        return
+        
     def get_gradients(self):
         self.round += 1
-        if self.round == 3 and self.id in [0,1]:
-            shutil.move("./databases/client"+str(self.id+1),"./databases/old_client"+str(self.id+1))
-            shutil.move("./databases/shuffle_client"+str(self.id+1),"./databases/client"+str(self.id+1))
-            mapping = read_mapping("./mapping_scdg1.txt")
-            reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
-            n_clients = 8
-            self.trainset, y_full_train, self.testset, self.y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, self.id)
-            
         print("##########   COMPUTING GRADIENT ROUND " + str(self.round) + " #################")
-        params_model2 = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        return AESCipher(AESKEY).encrypt(params_model2)
+        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        characters = string.ascii_letters + string.digits + string.punctuation
+        AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
+        encrypted_parameters = AESCipher(AESKEY).encrypt(parameters)
+        encrypted_key = rsa.encrypt(AESKEY.encode('utf8'), self.publickey)
+        return encrypted_key + encrypted_parameters
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
