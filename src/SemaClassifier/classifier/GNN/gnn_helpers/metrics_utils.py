@@ -49,7 +49,7 @@ def write_contribution(results, file):
     p = file
     if not os.path.isfile(p):
         os.makedirs(os.path.dirname(file), exist_ok=True)
-        title="N,Time"
+        title="Time"
         for i in range(1,len(results)):
             title+=f",Client{i}"
         with open(p, "w") as f:

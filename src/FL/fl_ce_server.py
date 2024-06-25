@@ -43,7 +43,6 @@ class CEServer(fl.client.NumPyClient):
         self.gradients = []
         self.Contribution_records=[]
         self.last_k=10
-        self.round = 0
         self.enc = enc
         self.filename=filename
         (self.publickey, self.privatekey) = rsa.newkeys(2048)
@@ -93,8 +92,6 @@ class CEServer(fl.client.NumPyClient):
     ) -> Tuple[float, int, Dict]:
         if self.enc:
             parameters = self.reshape_parameters(parameters)
-        if "check" in config and config["check"] == False: #contributions every x round -> update params every round after that
-            return float(0.0), len(self.testset), {"accuracy": float(0.0)}
         self.set_parameters(parameters)
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
@@ -102,7 +99,6 @@ class CEServer(fl.client.NumPyClient):
         
     def get_contributions(self, gradients):
         t1 = time.time()
-        self.round += 1
         self.gradients = []
         mapping = {}
         for i,gradient in enumerate(gradients):
@@ -114,7 +110,6 @@ class CEServer(fl.client.NumPyClient):
         idxs = [i for i in range(N)]
         sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
         util = {S:self.utility(S=S) for S in sets}
-        print(util)
         SVs = [0 for i in range(N)]
         perms = list(permutations(idxs))
         for idx in idxs:
@@ -132,7 +127,6 @@ class CEServer(fl.client.NumPyClient):
             SV_sorted[m] = SVs[mapping[m]]
         c.extend(SV_sorted)
         metrics_utils.write_contribution(c, self.filename)
-        print("Shapley values round: "+str(self.round),"time: "+str(t2-t1),SV_sorted)
         return SVs
         
 def main() -> None:

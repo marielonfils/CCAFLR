@@ -47,7 +47,6 @@ class GNNClient(fl.client.NumPyClient):
         self.filename = filename
         self.train_time = 0
         self.global_model = model
-        self.round = 0
         self.publickey = ""
     
     def set_public_key(self, rsa_public_key):
@@ -91,8 +90,6 @@ class GNNClient(fl.client.NumPyClient):
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
-        self.round += 1
-        print("##########   COMPUTING GRADIENT ROUND " + str(self.round) + " #################")
         parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         characters = string.ascii_letters + string.digits + string.punctuation
         AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
