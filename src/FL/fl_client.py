@@ -25,14 +25,15 @@ import copy
 import time
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
-
+import secrets
+import string
+import rsa
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
 
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
@@ -47,8 +48,12 @@ class GNNClient(fl.client.NumPyClient):
         self.dirname = dirname
         self.train_time = 0
         self.global_model = model
-        self.round=0
-      
+        self.publickey = ""
+    
+    def set_public_key(self, rsa_public_key):
+        self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
+        return
+  
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
     
@@ -59,7 +64,10 @@ class GNNClient(fl.client.NumPyClient):
         self.model.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters: List[np.ndarray], config:Dict[str,str]) -> Tuple[List[np.ndarray], int, Dict]:
-        self.set_parameters(parameters)
+        if "wait" in config and config["wait"] == "no_update":
+                pass
+        else:
+            self.set_parameters(parameters)
         self.global_model = copy.deepcopy(self.model)
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
@@ -86,12 +94,12 @@ class GNNClient(fl.client.NumPyClient):
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
-        print("##########   COMPUTING GRADIENT  #################")
-        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
-        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(gradient)
-    
+        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        characters = string.ascii_letters + string.digits + string.punctuation
+        AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
+        encrypted_parameters = AESCipher(AESKEY).encrypt(parameters)
+        encrypted_key = rsa.encrypt(AESKEY.encode('utf8'), self.publickey)
+        return encrypted_key + encrypted_parameters
     
     
 def main() -> None:
@@ -124,9 +132,16 @@ def main() -> None:
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
-        help="Specifies the path for te dataset"
+        help="Specifies the path for the dataset"
+    )
+    parser.add_argument(
+        "--modelpath",
+        type=str,
+        required=False,
+        help="Specifies the path for the model"
     )
     
     args = parser.parse_args()
@@ -135,6 +150,7 @@ def main() -> None:
     dataset_name = args.dataset
     filename = args.filepath
     dirname = ""
+    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -180,6 +196,8 @@ def main() -> None:
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
     model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     
+    if model_path is not None:
+        model = torch.load(model_path)
     #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")

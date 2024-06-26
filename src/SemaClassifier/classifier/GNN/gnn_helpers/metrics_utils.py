@@ -49,8 +49,8 @@ def write_contribution(results, file):
     p = file
     if not os.path.isfile(p):
         os.makedirs(os.path.dirname(file), exist_ok=True)
-        title="model,N,Time"
-        for i in range(1,len(results)-2):
+        title="Time"
+        for i in range(1,len(results)):
             title+=f",Client{i}"
         with open(p, "w") as f:
             f.write(title+"\n")
@@ -59,7 +59,7 @@ def write_contribution(results, file):
         l+=f",{results[i]}"
     with open(p, "a") as f:
         f.write(l+"\n")
-
+        
 def write_to_csv(results, file):
     # Write stats and params in csv file
     p = file

@@ -31,12 +31,15 @@ import tenseal as ts
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import json
 import time
+import shutil
+import secrets
+import string
+import rsa
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
@@ -59,11 +62,10 @@ class GNNClient(fl.client.NumPyClient):
         self.filename = filename
         self.dirname = dirname
         self.train_time = 0
-        self.round = 0
         self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
+        self.publickey = ""
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
-
         if pk is None: #generate random a for pk
             self.context = ts.context(ts.SCHEME_TYPE.MK_CKKS,poly_mod_degree,-1,coeff_mod_bit_sizes)
         else: #reuse a for pk
@@ -105,12 +107,17 @@ class GNNClient(fl.client.NumPyClient):
             parms_flat = parms_flat#*len(self.trainset)
         return self.context,self.encrypt(parms_flat)
 
+    def set_public_key(self, rsa_public_key):
+        self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
+        return
+        
     def get_gradients(self):
-        print("##########   COMPUTING GRADIENT  #################")
-        params_model1 = [val.cpu().numpy() for _, val in self.global_model.state_dict().items()]
-        params_model2 = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-        gradient = [params_model2[i] - params_model1[i] for i in range(len(params_model1))]
-        return AESCipher(AESKEY).encrypt(gradient)
+        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        characters = string.ascii_letters + string.digits + string.punctuation
+        AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
+        encrypted_parameters = AESCipher(AESKEY).encrypt(parameters)
+        encrypted_key = rsa.encrypt(AESKEY.encode('utf8'), self.publickey)
+        return encrypted_key + encrypted_parameters
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
         self.model.train()
@@ -135,10 +142,11 @@ class GNNClient(fl.client.NumPyClient):
         m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         return self.get_parameters(config={}), len(self.trainset), loss    
     
-    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str]=None,flat=True) -> Tuple[List[np.ndarray], int, Dict]:
-        if flat:
-            parameters = self.reshape_parameters(parameters)
-        self.set_parameters(parameters, config)
+    def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
+        if not(parameters != None and len(parameters) == 1):
+            if flat:
+                parameters = self.reshape_parameters(parameters)
+            self.set_parameters(parameters, config)
         self.global_model = copy.deepcopy(self.model)
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
@@ -162,6 +170,8 @@ class GNNClient(fl.client.NumPyClient):
     
     def evaluate_enc(self, parameters: List[np.ndarray], config=None, reshape = False
     ) -> Tuple[float, int, Dict]:
+        if parameters != None and len(parameters) == 1:
+            return 0.0,len(self.testset),{}
         if reshape:
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
@@ -203,9 +213,16 @@ def main() -> None:
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
-        help="Specifies the path for te dataset"
+        help="Specifies the path for the dataset"
+    )
+    parser.add_argument(
+        "--modelpath",
+        type=str,
+        required=False,
+        help="Specifies the path for the model"
     )
 
     args = parser.parse_args()
@@ -214,6 +231,7 @@ def main() -> None:
     filename = args.filepath
     dataset_name = args.dataset
     dirname=""
+    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -258,8 +276,11 @@ def main() -> None:
     drop_ratio = 0.5
     residual = False
     #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
-    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    
+    if model_path is not None:
+        model = torch.load(model_path,map_location=DEVICE)
+        model.eval()
+    else:
+        model = GINE(hidden, num_classes, num_layers).to(DEVICE)
     #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")

@@ -16,11 +16,11 @@ import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
-
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 from itertools import chain, combinations, permutations
 from pathlib import Path
+import rsa
 import time
 import sys
 sys.path.append('../../../../../TenSEAL')
@@ -29,7 +29,6 @@ import tenseal as ts
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
 BATCH_SIZE_TEST=32
-AESKEY = "bzefuilgfeilb4545h4rt5h4h4t5eh44eth878t6e738h"
 
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
@@ -44,12 +43,12 @@ class CEServer(fl.client.NumPyClient):
         self.gradients = []
         self.Contribution_records=[]
         self.last_k=10
-        self.round = 0
         self.enc = enc
         self.filename=filename
-         
+        (self.publickey, self.privatekey) = rsa.newkeys(2048)
+    
     def identify(self):
-        return True
+        return [str(self.publickey.n), str(self.publickey.e)]
         
     def utility(self, S):
         if S == ():
@@ -57,44 +56,18 @@ class CEServer(fl.client.NumPyClient):
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             return float(accuracy)
         l = len(S)
-        params_model = [val.cpu().numpy() for _, val in self.model.state_dict().items()]
         gradient_sum = self.gradients[S[0]]
         for i in range(1,l):
             gradient_sum = [gradient_sum[j] + self.gradients[S[i]][j] for j in range(len(gradient_sum))]
-        gradient_sum = [x/l for x in gradient_sum]
-        parameters = [params_model[k] + gradient_sum[k] for k in range(len(gradient_sum))]
+        parameters = [x/l for x in gradient_sum]
         temp_model = copy.deepcopy(self.model)
         params_dict = zip(temp_model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         temp_model.load_state_dict(state_dict, strict=True)
         test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
-        return float(accuracy)
+        return float(bal_acc)
 
-    
-    def get_contributions(self, gradients):
-        self.round += 1
-        t1 = time.time()
-        self.gradients = [self.reshape_parameters(AESCipher(AESKEY).decrypt(gradient)) for gradient in gradients]
-        N = len(gradients)
-        idxs = [i for i in range(N)]
-        sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
-        util = {S:self.utility(S=S) for S in sets}
-        SVs = [0 for i in range(N)]
-        perms = list(permutations(idxs))
-        for idx in idxs:
-            SV = 0
-            for t in perms:
-                index = t.index(idx)
-                u1 = util[tuple(sorted(t[:index]))]
-                u2 = util[tuple(sorted(t[:index+1]))]
-                SV += u2-u1
-            SVs[idx] = SV/len(perms)
-        t2=time.time()
-        c=[str(self.model.__class__.__name__),N, t2-t1]
-        c.extend(SVs)
-        metrics_utils.write_contribution(c, self.filename)
-        return SVs
 
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         params_dict = zip(self.model.state_dict().keys(), parameters)
@@ -123,8 +96,39 @@ class CEServer(fl.client.NumPyClient):
         test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
-
-    
+        
+    def get_contributions(self, gradients):
+        t1 = time.time()
+        self.gradients = []
+        mapping = {}
+        for i,gradient in enumerate(gradients):
+            AESKEY = rsa.decrypt(gradient[:256], self.privatekey).decode('utf8')
+            parameters = AESCipher(AESKEY).decrypt(gradient[256:])
+            self.gradients.append(self.reshape_parameters(parameters[1:]))
+            mapping[parameters[0]] = i
+        N = len(gradients)
+        idxs = [i for i in range(N)]
+        sets = list(chain.from_iterable(combinations(idxs, r) for r in range(len(idxs)+1)))
+        util = {S:self.utility(S=S) for S in sets}
+        SVs = [0 for i in range(N)]
+        perms = list(permutations(idxs))
+        for idx in idxs:
+            SV = 0
+            for t in perms:
+                index = t.index(idx)
+                u1 = util[tuple(sorted(t[:index]))]
+                u2 = util[tuple(sorted(t[:index+1]))]
+                SV += u2-u1
+            SVs[idx] = SV/len(perms)
+        t2 = time.time()
+        c=[t2-t1]
+        SV_sorted = [0 for i in range(self.id)]
+        for m in mapping:
+            SV_sorted[m] = SVs[mapping[m]]
+        c.extend(SV_sorted)
+        metrics_utils.write_contribution(c, self.filename)
+        return SVs
+        
 def main() -> None:
 
     # Parse command line argument `partition` and `nclients`
@@ -140,6 +144,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for the dataset",
@@ -160,14 +165,15 @@ def main() -> None:
     dataset_name = args.dataset
     id = n_clients
     enc = args.enc
+    wo = ""
+    if not enc:
+        wo = "_wo"
     filename = args.filepath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
-        filename = f"{filename}/{timestr2}/ce{id}_{timestr1}.csv"
+        filename = f"{filename}/{timestr2}{wo}/ce{id}_{timestr1}.csv"
     print("FFFNNN",filename)
-
-
 
     #Dataset Loading
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1

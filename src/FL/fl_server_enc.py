@@ -175,6 +175,7 @@ def main():
     )
     parser.add_argument(
         "--dataset",
+        default = "",
         type=str,
         required=False,
         help="Specifies the path for te dataset"
@@ -185,18 +186,36 @@ def main():
         help="Specifies if there is contribution evaluation or not",
     )
 
+    parser.add_argument(
+        "--methodo",
+        default = "",
+        type=str,
+        required=False,
+        help="Specifies the methodology used to deal with client that have low SV"
+    )
+    parser.add_argument(
+        "--threshold",
+        default = -1.0,
+        type=float,
+        required=False,
+        help="Specifies the threshold to delete clients"
+    )
+    
     args = parser.parse_args()
     n_clients = args.nclients
     id = n_clients
     nrounds = args.nrounds
     filename = args.filepath
     dataset_name = args.dataset
+    methodo = args.methodo
+    threshold = args.threshold
     ce=args.noce
     dirname=""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
         filename1 = f"{filename}/{timestr2}/model.txt"
+        filename2 = f"{filename}/{timestr2}/setup.txt"
         dirname=f"{filename}/{timestr2}/parms_{id}/"
         filename = f"{filename}/{timestr2}/server{id}_{timestr1}.csv"
     print("FFFNNN",filename)
@@ -241,7 +260,12 @@ def main():
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
     if filename is not None:
         metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset),"labels":str(y_test)})
-
+        with open(filename2,"w") as f:
+          f.write("n_clients: " + str(n_clients) + "\n")
+          f.write("nrounds: " + str(nrounds) + "\n")
+          f.write("dataset_name: " + str(dataset_name) + "\n")
+          f.write("methodo: " + str(methodo) + "\n")
+          f.write("threshold: " + str(threshold) + "\n")
     
     # FL strategy
     strategy = fl.server.strategy.MKFedAvg(
@@ -273,6 +297,8 @@ def main():
         enc=True,
         contribution=ce,
         shape=shapes
+        methodo = methodo,
+        threshold = threshold,
     )
     if filename is not None:
         metrics_utils.write_history_to_csv(hist,model, nrounds, filename)
