@@ -261,6 +261,11 @@ def split_dataset_indexes(dataset, label):
         val_index = test
     return train_index, val_index
 
+def split_dataset_indexes2(dataset, label):
+      
+    train_index=[i for i in range(len(dataset))]
+    return train_index, []
+
 def cross_val_split_dataset_indexes(dataset, label, k):
     sss = StratifiedShuffleSplit(n_splits=k, test_size=0.3, random_state=42)
     train_indexes = []

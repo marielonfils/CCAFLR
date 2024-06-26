@@ -1,48 +1,27 @@
-python -m venv ../FLenv
-source ../FLenv/bin/activate
-sudo apt install cmake
-git clone https://github.com/marielonfils/TenSEAL.git 
-pip install wheel
-pip install poetry
-cd TenSEAL/
-python -m pip install --no-build-isolation --verbose --editable . or python -m pip install . -> at least python3.8
-cd ..
-git clone https://@github.com/marielonfils/flower.git
-cd flower
-python -m pip install --no-build-isolation --verbose --editable .
-cd ..
-pip install torch
-pip install torch_geometric
-pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cpu.html or pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-pip install matplotlib
-pip install seaborn
-pip install progressbar2
-pip install grakel
-pip install dill
-pip install PyQt5
-pip install pyqt6
-
-
-# install new version of python
-
-sudo wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz                          
-tar -xf Python-3.10.12.tgz                                                                                                                                                                  
-cd Python-3.10.12/                                                                              
-./configure --enable-optimizations                                                              
-sudo make install                                                                               
-sudo update-alternatives --config python3
-
-compgen -c python | sort -u # list all python versions
-
-# install new version of cmake
-cd /opt/
-wget https://github.com/Kitware/CMake/releases/download/v3.29.2/cmake-3.29.2-linux-x86_64.sh
-chmod +x cmake-3.29.2-linux-x86_64.sh 
-sudo bash cmake-3.29.2-linux-x86_64.sh 
-sudo ln -s cmake-3.29.2-linux-x86_64/bin/ /usr/local/bin/
-
-# install new version of gcc
-sudo apt-get update
-sudo apt-get install gcc-8 g++-8
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 50
-sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 50
+dill==0.3.8
+GraKeL==0.1.10
+matplotlib==3.8.1
+matplotlib-inline==0.1.7
+numpy==1.26.1
+pandas==2.1.2
+poetry==1.7.1
+poetry-core==1.8.1
+poetry-plugin-export==1.6.0
+progressbar==2.5
+protobuf==3.20.3
+PyQt5==5.15.10
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.13.0
+PyQt6==6.6.1
+PyQt6-Qt6==6.6.2
+PyQt6-sip==13.6.0
+seaborn==0.13.0
+torch==2.2.2+cpu
+torch-scatter==2.1.2+pt21cpu
+torch-sparse==0.6.18+pt21cpu
+torch-spline-conv==1.2.2+pt21cpu
+torch_geometric==2.5.2
+torchaudio==2.2.2+cpu
+torchvision==0.17.2+cpu
+tornado==6.4
+wheel==0.41.3

@@ -6,6 +6,9 @@ import numpy as np
 import argparse
 import torch
 from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score,recall_score , f1_score, balanced_accuracy_score
+
 
 class PlotResults:
     def __init__(self, xp_path, xp_name, ni=None, nf=None, step=None, reverse=False, pred=False):
@@ -106,7 +109,7 @@ class PlotResults:
             for m in metrics:
                 self.plot_metric_client_bfit(self.clients_mean_data[xp_name], m)
     
-    def plot_server_m_r(self,xp_names,metrics=None, types=None, separate=True):
+    def plot_server_m_r(self,xp_names,metrics=None, types=None, separate=True, save=None, baseline=None, title=None):
         if metrics is None:
             metrics = self.metrics_server
         if types is None:
@@ -114,10 +117,19 @@ class PlotResults:
         l=[]
         for xp_name in xp_names:
             for m in metrics:
-                l.extend(self.plot_metric_server(self.server_mean_data[xp_name][0], m, types,xp_name, separate=separate))
+                l.extend(self.plot_metric_server(self.server_mean_data[xp_name][0], m, types,xp_name, separate=separate, title=title))
         if not separate:
+            if baseline is not None:
+                plt.plot([i for i in range(61)],[baseline for _ in range(61)])
+                l.extend(["baseline"])
             plt.legend(l)
+            plt.grid(True)
+            #plt.xlim(left=0)
+            if save is not None:
+                plt.savefig(save)
+            
             plt.show()
+            
 
     def read_xp(self,filepath,n_xp,reverse=False):
         with open(filepath, "r") as f:
@@ -192,10 +204,24 @@ class PlotResults:
                 clients.append(pd.read_csv(file,index_col=False,skipfooter=pred).drop(columns=["model"]))
             else:
                 f=pd.read_csv(file,index_col=False,skipfooter=pred,engine='python')
-                predictions.append(f["Predictions"])
+                pf=[]
+                for pre in f["Predictions"]:
+                    p = [x.strip() for x in pre.split()]
+                    if p[0] == "[":
+                        del p[0]
+                    else:
+                        p[0]=p[0][1:]
+                    p[-1]=p[-1][:-1]
+                    pf.append([int(x.strip())  for x in p ])
+
+                predictions.append(pf)
                 clients.append(f.drop(columns=["model","Predictions"]))
                 with open(file, "r") as f:
-                    labels.append(list(f.readlines()[-1]))
+                    l=f.readlines()[-1].split(',')
+                    l[0]=l[0][1:]
+                    l[-1]=l[-1][:-2]
+                    labels.append([int(x) for x in l])
+                    #labels.append(list(f.readlines()[-1]))
         return clients, labels, predictions
 
     def read_server_results(self,filepath, pred=0):
@@ -208,13 +234,35 @@ class PlotResults:
             server=[pd.read_csv(filepath,index_col=False,header=0,skipfooter=pred).drop(columns=["model"]).set_index("metric")]    
         else:
             f=pd.read_csv(filepath,index_col=False,header=0,skipfooter=pred,engine='python').set_index("metric")
-            print("pred",f.loc["predictions_c"])
-            prediction.append(f.loc["predictions_c"])
+            pf=[]
+            for i,j in f.loc["predictions_c"].items():
+                if i != "model":
+                    p = [x.strip() for x in j.split()]
+                    if p[0] == "[":
+                        del p[0]
+                    else:
+                        p[0]=p[0][1:]
+
+                    if p[-1] == "]":
+                        del p[-1]
+                    else:
+                        p[-1]=p[-1][:-1]
+                    pf.append([int(x.strip())  for x in p ])               
+            prediction.append(pf)
+            
+            
+            #f=pd.read_csv(filepath,index_col=False,header=0,skipfooter=pred,engine='python').set_index("metric")
+            #print("pred",f.loc["predictions_c"])
+            #prediction.append(f.loc["predictions_c"])
             f2=f.drop("predictions_c")
             server=[f2.drop(columns=["model"]).astype(float)]
             print("SERVER", server, server[0].dtypes)
             with open(filepath, "r") as f:
-                labels.append(list(f.readlines()[-1]))
+                l=f.readlines()[-1].split(',')
+                l[0]=l[0][1:]
+                l[-1]=l[-1][:-2]
+                print(l)
+                labels.append([int(x) for x in l])
         return server,labels,prediction
     def plot_metric_client(self,clients_results,metric,path=None):
         l=[]
@@ -283,26 +331,35 @@ class PlotResults:
             plt.savefig(path+metric+".png")
         plt.show()
 
-    def plot_metric_server(self,server_results,metric,types,xp_name,path=None, separate=True):
+    def plot_metric_server(self,server_results,metric,types,xp_name,path=None, separate=True, title=None):
         l=[]
         for t in types:
-            m=metric+f"_{t}"
+            m=metric
+            if t!="":
+                m=m+f"_{t}"
             y=server_results.loc[m]
             x=[i for i in range(len(y))]
+            print(xp_name,np.argmax(y),np.max(y))
             plt.plot(x,y)
             plt.locator_params(nbins=8)
             #plt.xticks(x)
             l.append(xp_name)#+m)
         plt.xlabel("Round [/]")
-        if metric=="test_time":
+        if "time" in metric:
             plt.ylabel(f"{metric} [s]")
         else:
             plt.ylabel(f"{metric} [/]")
-        plt.title(f"{metric} for each round")
+        #plt.title("Balanced Accuracy for each round")
+        if title is None:
+            plt.title(f"{metric} for each round")
+        else:
+            plt.title(title)
         
         if path is not None:
             plt.savefig(path)
         if separate:
+            plt.grid(True)
+            #plt.xlim(left=0)
             plt.show()
             plt.legend(l)
         return l
@@ -340,4 +397,29 @@ class PlotResults:
         plt.ylabel(ylabel)
         plt.title(title)
         plt.legend()
+        plt.show()
+    
+    def plot_confusion_matrix(self,y_true, y_pred, fam_idx, title, model_name=None):
+        # plot confusion matrix
+        if type(y_true[0]) != str:  
+            y_true_label = [fam_idx[i] for i in y_true]
+            y_pred_label = [fam_idx[i] for i in y_pred]
+        else:
+            y_true_label = y_true
+            y_pred_label = y_pred
+
+        cm = confusion_matrix(y_true_label, y_pred_label, labels=np.unique(fam_idx))
+        print(cm)
+
+        df_cm = pd.DataFrame(cm, index = np.unique(fam_idx),
+                        columns = np.unique(fam_idx))
+        plt.figure(figsize = (10,7))
+        heatmap = sns.heatmap(df_cm, annot=True, cmap="Blues", fmt="d",cbar=False)
+        heatmap.yaxis.set_ticklabels(heatmap.yaxis.get_ticklabels(), rotation=0, ha='right', fontsize=14)
+        heatmap.xaxis.set_ticklabels(heatmap.xaxis.get_ticklabels(), rotation=45, ha='right', fontsize=14)
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.title(f"Confusion matrix for {title}")
+        if model_name is not None:
+            plt.savefig(f"confusion_matrix_{model_name}.png")
         plt.show()
