@@ -1,0 +1,156 @@
+#SERVER
+
+python FL/fl_server.py --nclients=2 --nrounds=2
+2024-03-06 09:26:30.079139: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2024-03-06 09:26:30.080416: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
+2024-03-06 09:26:30.100278: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-03-06 09:26:30.100309: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-03-06 09:26:30.100323: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-03-06 09:26:30.104579: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-03-06 09:26:30.576305: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src ['/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/SVM', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/GNN', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/FL', '/usr/lib/python310.zip', '/usr/lib/python3.10', '/usr/lib/python3.10/lib-dynload', '/home/mlonfils/Documents/Doctorat/fork/flower2/lib/python3.10/site-packages', '/home/mlonfils/Documents/Doctorat/fork/TenSEAL', '/home/mlonfils/Documents/Doctorat/fork/flower/src/py', '../../../../../TenSEAL', '../../../../../../TenSEAL']
+Path: ./databases/examples_samy/BODMAS/01/
+Subpath: ./databases/examples_samy/BODMAS/01/berbew/  |
+Subpath: ./databases/examples_samy/BODMAS/01/sillyp2p/
+Subpath: ./databases/examples_samy/BODMAS/01/benjamin/
+Subpath: ./databases/examples_samy/BODMAS/01/small/
+Subpath: ./databases/examples_samy/BODMAS/01/mira/
+Subpath: ./databases/examples_samy/BODMAS/01/upatre/
+Subpath: ./databases/examples_samy/BODMAS/01/wabot/
+100% |################################################|
+GNN Dataset length: 1507
+ client 2 : n_train 452, start 904, end 1356, client False, wl False
+ client 2 : n_test 201, start 402, end 603, client False, wl False
+ Client 2 : datasets length, 0, 201
+INFO flwr 2024-03-06 09:26:33,080 | app.py:163 | Starting Flower server, config: ServerConfig(num_rounds=2, round_timeout=None)
+INFO flwr 2024-03-06 09:26:33,086 | app.py:176 | Flower ECE: gRPC server running (2 rounds), SSL is enabled
+INFO flwr 2024-03-06 09:26:33,086 | server.py:91 | Initializing global parameters
+INFO flwr 2024-03-06 09:26:33,086 | server.py:273 | Using initial parameters provided by strategy
+INFO flwr 2024-03-06 09:26:33,086 | server.py:93 | Evaluating initial parameters
+ --------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.13930348258706468, 1236.007713507657
+INFO flwr 2024-03-06 09:26:33,126 | server.py:96 | initial parameters (loss, other metrics): 1236.007713507657, {'accuracy': 0.13930348258706468}
+server-example-request
+INFO flwr 2024-03-06 09:26:41,800 | server.py:106 | FL starting
+DEBUG flwr 2024-03-06 09:26:43,868 | server.py:223 | fit_round 1: strategy sampled 2 clients (out of 2)
+DEBUG flwr 2024-03-06 09:28:58,518 | server.py:237 | fit_round 1 received 2 results and 0 failures
+WARNING flwr 2024-03-06 09:28:58,520 | fedavg.py:250 | No fit_metrics_aggregation_fn provided
+ --------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.31840796019900497, 43.39596070341803
+INFO flwr 2024-03-06 09:28:58,554 | server.py:126 | fit progress: (1, 43.39596070341803, {'accuracy': 0.31840796019900497}, 136.75397830500015)
+DEBUG flwr 2024-03-06 09:28:58,554 | server.py:174 | evaluate_round 1: strategy sampled 2 clients (out of 2)
+DEBUG flwr 2024-03-06 09:29:04,636 | server.py:188 | evaluate_round 1 received 2 results and 0 failures
+WARNING flwr 2024-03-06 09:29:04,636 | fedavg.py:281 | No evaluate_metrics_aggregation_fn provided
+DEBUG flwr 2024-03-06 09:29:04,637 | server.py:223 | fit_round 2: strategy sampled 2 clients (out of 2)
+DEBUG flwr 2024-03-06 09:30:42,713 | server.py:237 | fit_round 2 received 2 results and 0 failures
+ --------------------TEST OK----------------
+ Server: Evaluation accuracy & loss, 0.6069651741293532, 20.39285808771997
+INFO flwr 2024-03-06 09:30:42,756 | server.py:126 | fit progress: (2, 20.39285808771997, {'accuracy': 0.6069651741293532}, 240.9553185929999)
+DEBUG flwr 2024-03-06 09:30:42,756 | server.py:174 | evaluate_round 2: strategy sampled 2 clients (out of 2)
+DEBUG flwr 2024-03-06 09:30:44,218 | server.py:188 | evaluate_round 2 received 2 results and 0 failures
+INFO flwr 2024-03-06 09:30:44,218 | server.py:154 | FL finished in 242.41742687899978
+INFO flwr 2024-03-06 09:30:44,218 | app.py:226 | app_fit: losses_distributed [(1, 48.03895950317383), (2, 24.983704566955566)]
+INFO flwr 2024-03-06 09:30:44,218 | app.py:227 | app_fit: metrics_distributed_fit {}
+INFO flwr 2024-03-06 09:30:44,218 | app.py:228 | app_fit: metrics_distributed {}
+INFO flwr 2024-03-06 09:30:44,218 | app.py:229 | app_fit: losses_centralized [(0, 1236.007713507657), (1, 43.39596070341803), (2, 20.39285808771997)]
+INFO flwr 2024-03-06 09:30:44,218 | app.py:230 | app_fit: metrics_centralized {'accuracy': [(0, 0.13930348258706468), (1, 0.31840796019900497), (2, 0.6069651741293532)]}
+
+#CLIENT 0
+
+python FL/fl_client.py --nclients=2 --partition=0
+2024-03-06 09:26:38.072604: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2024-03-06 09:26:38.073929: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
+2024-03-06 09:26:38.094232: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-03-06 09:26:38.094265: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-03-06 09:26:38.094279: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-03-06 09:26:38.098101: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
+2024-03-06 09:26:38.098239: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-03-06 09:26:38.525652: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src /home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/src
+/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src ['/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/SVM', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/GNN', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/FL', '/usr/lib/python310.zip', '/usr/lib/python3.10', '/usr/lib/python3.10/lib-dynload', '/home/mlonfils/Documents/Doctorat/fork/flower2/lib/python3.10/site-packages', '/home/mlonfils/Documents/Doctorat/fork/TenSEAL', '/home/mlonfils/Documents/Doctorat/fork/flower/src/py', '../../../../../TenSEAL', '../../../../../../TenSEAL', '../../../../../TenSEAL']
+Path: ./databases/examples_samy/BODMAS/01/
+Subpath: ./databases/examples_samy/BODMAS/01/berbew/|
+Subpath: ./databases/examples_samy/BODMAS/01/sillyp2p/
+Subpath: ./databases/examples_samy/BODMAS/01/benjamin/
+Subpath: ./databases/examples_samy/BODMAS/01/small/
+Subpath: ./databases/examples_samy/BODMAS/01/mira/
+Subpath: ./databases/examples_samy/BODMAS/01/upatre/
+Subpath: ./databases/examples_samy/BODMAS/01/wabot/
+100% |##############################################|
+ client 0 : n_train 452, start 0, end 452, client True, wl False
+ client 0 : n_test 201, start 0, end 201, client True, wl False
+ Client 0 : datasets length, 452, 201
+INFO flwr 2024-03-06 09:26:41,786 | grpc.py:58 | Opened secure gRPC connection using certificates
+DEBUG flwr 2024-03-06 09:26:41,787 | connection.py:42 | ChannelConnectivity.IDLE
+DEBUG flwr 2024-03-06 09:26:41,788 | connection.py:42 | ChannelConnectivity.CONNECTING
+DEBUG flwr 2024-03-06 09:26:41,798 | connection.py:42 | ChannelConnectivity.READY
+response: <class 'str'>, answer: <class 'int'>
+ Client 0: Epoch 0, Loss: 403.2062278004874
+ Client 0: Epoch 1, Loss: 87.833783217236
+ Client 0: Epoch 2, Loss: 81.08049429834416
+ Client 0: Epoch 3, Loss: 43.545726033438626
+ Client 0: Epoch 4, Loss: 57.77288602305725
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 0: Evaluation accuracy & loss, 0.31840796019900497, 46.335240947666456
+ Client 0: Epoch 0, Loss: 152.68902132152456
+ Client 0: Epoch 1, Loss: 29.94130098292258
+ Client 0: Epoch 2, Loss: 38.78701900380903
+ Client 0: Epoch 3, Loss: 20.6424716341812
+ Client 0: Epoch 4, Loss: 20.142263197265894
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 0: Evaluation accuracy & loss, 0.5920398009950248, 24.87377938227867
+DEBUG flwr 2024-03-06 09:30:44,220 | connection.py:141 | gRPC channel closed
+INFO flwr 2024-03-06 09:30:44,221 | app.py:378 | Disconnect and shut down
+
+#CLIENT 1
+
+python FL/fl_client.py --nclients=2 --partition=1at/fork/CCAFLR/src$ 
+2024-03-06 09:26:40.230884: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2024-03-06 09:26:40.232222: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
+2024-03-06 09:26:40.252755: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-03-06 09:26:40.252796: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-03-06 09:26:40.252812: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-03-06 09:26:40.256863: I tensorflow/tsl/cuda/cudart_stub.cc:28] Could not find cuda drivers on your machine, GPU will not be used.
+2024-03-06 09:26:40.256998: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-03-06 09:26:40.717019: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src /home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/src
+/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src ['/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/SVM', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/SemaClassifier/classifier/GNN', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src', '/home/mlonfils/Documents/Doctorat/fork/CCAFLR/src/FL', '/usr/lib/python310.zip', '/usr/lib/python3.10', '/usr/lib/python3.10/lib-dynload', '/home/mlonfils/Documents/Doctorat/fork/flower2/lib/python3.10/site-packages', '/home/mlonfils/Documents/Doctorat/fork/TenSEAL', '/home/mlonfils/Documents/Doctorat/fork/flower/src/py', '../../../../../TenSEAL', '../../../../../../TenSEAL', '../../../../../TenSEAL']
+Path: ./databases/examples_samy/BODMAS/01/
+Subpath: ./databases/examples_samy/BODMAS/01/berbew/                |
+Subpath: ./databases/examples_samy/BODMAS/01/sillyp2p/
+Subpath: ./databases/examples_samy/BODMAS/01/benjamin/
+Subpath: ./databases/examples_samy/BODMAS/01/small/
+Subpath: ./databases/examples_samy/BODMAS/01/mira/
+Subpath: ./databases/examples_samy/BODMAS/01/upatre/
+Subpath: ./databases/examples_samy/BODMAS/01/wabot/
+100% |##############################################################|
+ client 1 : n_train 452, start 452, end 904, client True, wl False
+ client 1 : n_test 201, start 201, end 402, client True, wl False
+ Client 1 : datasets length, 452, 201
+INFO flwr 2024-03-06 09:26:43,853 | grpc.py:58 | Opened secure gRPC connection using certificates
+DEBUG flwr 2024-03-06 09:26:43,854 | connection.py:42 | ChannelConnectivity.IDLE
+DEBUG flwr 2024-03-06 09:26:43,855 | connection.py:42 | ChannelConnectivity.CONNECTING
+DEBUG flwr 2024-03-06 09:26:43,868 | connection.py:42 | ChannelConnectivity.READY
+ Client 1: Epoch 0, Loss: 364.30476879018596
+ Client 1: Epoch 1, Loss: 85.15056370422903
+ Client 1: Epoch 2, Loss: 63.38242417732171
+ Client 1: Epoch 3, Loss: 45.09351684772863
+ Client 1: Epoch 4, Loss: 29.67375480179238
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 1: Evaluation accuracy & loss, 0.26865671641791045, 49.742678855782124
+ Client 1: Epoch 0, Loss: 120.42568017740166
+ Client 1: Epoch 1, Loss: 36.355080646751205
+ Client 1: Epoch 2, Loss: 46.01762873303136
+ Client 1: Epoch 3, Loss: 32.19163091203808
+ Client 1: Epoch 4, Loss: 28.30733523748617
+ --------------------FIT OK----------------
+ --------------------TEST OK----------------
+ Client 1: Evaluation accuracy & loss, 0.6119402985074627, 25.093629258189036
+DEBUG flwr 2024-03-06 09:30:44,220 | connection.py:141 | gRPC channel closed
+INFO flwr 2024-03-06 09:30:44,221 | app.py:378 | Disconnect and shut down

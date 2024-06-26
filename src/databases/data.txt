@@ -1,0 +1,10 @@
+client 1 : 1053
+client 2 : 1053
+client 3 : 1053
+client 4 : 1053
+client 5 : 1053
+client 6 : 1053
+client 7 : 1053
+client 8 : 1053
+server   : 4179
+total : 12603

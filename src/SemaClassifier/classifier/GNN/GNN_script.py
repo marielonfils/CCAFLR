@@ -30,15 +30,11 @@ import progressbar
 
 import argparse
 
+import time
 
-# from ..Classifier import Classifier
-# from .GINClassifier import GIN
-# from .GINJKClassifier import GINJK
-# from .GCNClassifier import GCN
-# from .RGINClassifier import RanGIN
-# from .RGINJKClassifier import RanGINJK
-from GINJKFlagClassifier import GINJKFlag
-# from .GNNExplainability import GNNExplainability
+from models.GINEClassifier import GINE
+from models.GINJKClassifier import GINJK
+from models.GINMLPClassifier import GINMLP
 
 # import SVMClassifier from parent folder
 import sys
@@ -46,7 +42,8 @@ import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/SVM")
-from SVM.SVMWLClassifier import SVMWLClassifier
+print(cwd, sys.path)
+from SemaClassifier.classifier.SVM.SVMWLClassifier import SVMWLClassifier
 
 from utils import gen_graph_data, read_gs_4_gnn, read_json_4_gnn, read_json_4_wl, read_mapping, read_mapping_inverse
 import copy
@@ -121,7 +118,7 @@ def split_dataset_indexes(dataset, label):
     y_train = []
     val_dataset = []
     y_val = []
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=0.4, random_state=54)
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=0.4, random_state=4)
     # import pdb; pdb.set_trace()
     for train, test in sss.split(dataset, label):
         train_index = train
@@ -149,7 +146,7 @@ def load_partition(n_clients,id,train_idx,test_idx,dataset,client=True,wl=False,
         train_partition = train_idx[(id-1)*n_train: id*n_train]
     else:
         train_partition = train_idx[id * n_train: (id + 1) * n_train]
-    test_partition = test_idx[id * n_test: (id + 1) * n_test]    
+    test_partition = test_idx[id * n_test: (id + 1) * n_test]
     full_train_dataset, y_full_train, test_dataset, y_test = [], [], [], []
     for i in train_partition:
         full_train_dataset.append(dataset[i])
@@ -181,6 +178,7 @@ def one_epoch_train(model, train_loader, device, optimizer, criterion):
     return loss_all / len(train_loader.dataset)
 
 def train(model, train_dataset, batch_size, epochs, device, id):
+    t1=time.time()
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
@@ -188,32 +186,41 @@ def train(model, train_dataset, batch_size, epochs, device, id):
                               T_max = 42, # Maximum number of iterations.
                              eta_min = 1e-4) # Minimum learning rate.
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    t=time.time()-t1
     for epoch in range(epochs):
+        t2=time.time()
         loss = one_epoch_train(model, train_loader, device, optimizer, criterion)
         scheduler.step()
+        t+=time.time()-t2
         cprint(f"Client {id}: Epoch {epoch}, Loss: {loss}",id)
     cprint('--------------------FIT OK----------------',id)
     
-    return model, {'loss': loss}
+    return model, {'loss': loss,"train_time":t}
 
 def test(model, test_dataset, batch_size, device,id):
+    t0=time.time()
     model.eval()
     correct, loss_all = 0, 0.0
     criterion = torch.nn.CrossEntropyLoss()
     y_pred = []
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    t=time.time()-t0
     with torch.no_grad():
         for data in test_loader:
+            t1=time.time()
             data = data.to(device)
             output = model(data.x, data.edge_index, data.edge_attr, data.batch)
             loss = criterion(output, data.y).item()
             loss_all += loss * data.num_graphs
             pred = output.argmax(dim=1)
-            correct += pred.eq(data.y).sum().item()
+            t2=time.time()
+            t+=t2-t1
+            #correct += pred.eq(data.y).sum().item()
             for p in pred:
                 y_pred.append(p.item())
     cprint('--------------------TEST OK----------------',id)
-    return correct / len(test_loader.dataset), loss_all/len(test_loader.dataset), y_pred
+    #return correct / len(test_loader.dataset), loss_all/len(test_loader.dataset), y_pred
+    return t, loss_all/len(test_loader.dataset), y_pred
 
 
 def main(n_clients):

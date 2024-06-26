@@ -6,6 +6,16 @@ __pycache__/
 # C extensions
 *.so
 
+# GS extension
+*.gs
+*.json
+
+#results
+*.csv
+src/results/*
+!src/results/plot_results.py
+!src/results/plot.py
+
 # Distribution / packaging
 .Python
 build/
