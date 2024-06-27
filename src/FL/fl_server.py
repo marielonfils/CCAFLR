@@ -253,7 +253,7 @@ def main():
         Path("./FL/.cache/certificates/server.pem").read_bytes(),
         Path("./FL/.cache/certificates/server.key").read_bytes(),
         ),
-        contribution=ce
+        contribution=ce,
         methodo = methodo,
         threshold = threshold,
     )
