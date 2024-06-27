@@ -13,8 +13,7 @@ For the moment, this repository implements a **secure** federated learning frame
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
+
 
 ## Installation
 1. Clone the repository:
@@ -37,18 +36,33 @@ pip install.
  ```
 
 ## Usage
+### Scripts
+The **CCAFLR/src/FL** folder contains bash scripts to run easily the federated learning task on a single machine:
+ - *fl_run.sh* : without encryption and without contribution evaluation
+ - *fl_run_enc.sh* : with encryption but without contribution evaluation
+ - *ce_run.sh* : without encryption but with contribution evaluation
+ - *ce_run_enc.sh* : with encryption and with contribution evaluation.
+### Manually
+If you want to run each component manually, you need to run the aggregation server, the contribution evaluation server and the clients. 
+
 To run the secure server, use the following command in **CCAFLR/src/**:
 ```python
-python FL/fl_server_enc.py --nclients [number of clients] --nrounds [number of rounds] --filepath [folder path to store results] --dataset [split_scdg1] [--noce]
+python FL/fl_server_enc.py --nclients [number of clients] --nrounds [number of rounds] --filepath [folder path to store results] --dataset [split_scdg1] [--noce] --methodo [delete_one/delete/set_aside] --threshold [threshold value]
+```
+The *noce* option specifies that no contribution evaluation should be done. In that case, it is unnecessary to specify the *methodo* and *threshold* options.
+
+When evaluating the contributions, *noce* should not be specified. The *delete_one* methodology discards the worst client having a Shapley value under the threshold. The *delete* methodology discards all clients instead of the worst client. The *set_aside* methodology discards all clients and gives them the opportunity to rejoin the process at the next evaluation round. You also need to run the contribution evaluation server using the following command in **CCAFLR/src/**:
+```python
+python FL/fl_ce_server.py [--enc] --nclients [number of clients] --filepath [folder path to store results] --dataset [split_scdg1]
 ```
 
 To run the one client, use the following command in **CCAFLR/src/**:
 ```python
 python FL/fl_client_enc.py --nclients [number of clients] --partition [id of the client (0 to number of clients -1)] --filepath [folder path to store results] --dataset [split_scdg1]
 ```
-The *noce* option specifies that no contribution evaluation should be done.
+
 The *dataset* option specifies the dataset at *src/databases* with the 70% of the data shared equitably among 8 clients and 30% given to the server.
-To run the federated learning tast without encryption, replace the filenames of the server and the clients by *fl_server.py* and *fl_client.py*, respectively.
+To run the federated learning tast without encryption, replace the filenames of the server and the clients by *fl_server.py* and *fl_client.py*, respectively and remove the *enc** option from the CE server command.
 
 
 

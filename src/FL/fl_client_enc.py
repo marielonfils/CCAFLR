@@ -57,6 +57,7 @@ class GNNClient(fl.client.NumPyClient):
         self.n = None
         self.shapes = None
         self.global_model = model
+        self.round = 0
         
         self.y_test= y_test
         self.filename = filename
@@ -170,7 +171,7 @@ class GNNClient(fl.client.NumPyClient):
     
     def evaluate_enc(self, parameters: List[np.ndarray], config=None, reshape = False
     ) -> Tuple[float, int, Dict]:
-        if parameters != None and len(parameters) == 1:
+        if parameters != None and len(parameters.parameters.tensors) == 1: #TODO check condition parameters is a FitIns instance
             return 0.0,len(self.testset),{}
         if reshape:
             parameters = self.reshape_parameters(parameters)

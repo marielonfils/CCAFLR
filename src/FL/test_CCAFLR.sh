@@ -1,15 +1,18 @@
 #!/bin/bash
 declare -i nclients="8"
-declare -i nrounds="5"
+declare -i nrounds="3"
 filepath="./results"
-dataset="split_scdg1"
+dataset="samy"
 methodo="delete"
 threshold="0.0"
 
 
 echo "Starting server"
-python3 ./FL/fl_server.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath} --dataset=${dataset} --noce&
-sleep 60  # Sleep for 3s to give the server enough time to start
+python3 ./FL/fl_server.py --nrounds=${nrounds} --nclients=${nclients} --filepath=${filepath} --dataset=${dataset} --methodo=${methodo} --threshold=${threshold}&
+sleep 40  # Sleep for 3s to give the server enough time to start
+
+echo "Starting CE server"
+python3 ./FL/fl_ce_server.py --nclients=${nclients} --filepath=${filepath} --dataset=${dataset}&
 
 for ((i=0; i<nclients; i++)); do
     echo "Starting client $i"

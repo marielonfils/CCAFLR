@@ -49,6 +49,7 @@ class GNNClient(fl.client.NumPyClient):
         self.train_time = 0
         self.global_model = model
         self.publickey = ""
+        self.round=0
     
     def set_public_key(self, rsa_public_key):
         self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))

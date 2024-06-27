@@ -296,7 +296,7 @@ def main():
             Path("./FL/.cache/certificates/server.key").read_bytes(),),
         enc=True,
         contribution=ce,
-        shape=shapes
+        shape=shapes,
         methodo = methodo,
         threshold = threshold,
     )
