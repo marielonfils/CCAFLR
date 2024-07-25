@@ -16,6 +16,7 @@ For the moment, this repository implements a **secure** federated learning frame
 
 
 ## Installation
+Works with **Python 3.10.12**.
 1. Clone the repository:
 ```bash
  git clone git@github.com:marielonfils/CCAFLR.git
