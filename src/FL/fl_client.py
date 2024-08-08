@@ -1,5 +1,3 @@
-from flwr.common import NDArrays, Scalar
-
 from pathlib import Path
 import sys
 import os
@@ -8,26 +6,23 @@ print(cwd,cwd+"/src")
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 sys.path.append('../../../../../TenSEAL')
-import tenseal as ts
-from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
-from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
-from AESCipher import AESCipher
-import flwr as fl
-import numpy as np
 import torch
-import argparse
+import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
-from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
 
+import main_utils
+import flwr as fl
+from AESCipher import AESCipher
+import secrets
+import string
+import rsa
+
+import numpy as np
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 import copy
 import time
-import SemaClassifier.classifier.GNN.gnn_main_script as main_script
-import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
-import secrets
-import string
-import rsa
+
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE=16
@@ -105,53 +100,10 @@ class GNNClient(fl.client.NumPyClient):
     
 def main() -> None:
 
-    # Parse command line argument `partition` and `nclients`
-    parser = argparse.ArgumentParser(description="Flower")    
-    parser.add_argument(
-        "--partition",
-        type=int,
-        default=0,
-        choices=range(0, 10),
-        required=False,
-        help="Specifies the id of the client. \
-        Picks partition 0 by default",
-    )
-    parser.add_argument(
-        "--nclients",
-        type=int,
-        default=1,
-        choices=range(1, 10),
-        required=False,
-        help="Specifies the number of clients for dataset partition. \
-        Picks partition 1 by default",
-    )
-    parser.add_argument(
-        "--filepath",
-        type=str,
-        required=False,
-        help="Specifies the path for storing results"
-    )
-    parser.add_argument(
-        "--dataset",
-        default = "",
-        type=str,
-        required=False,
-        help="Specifies the path for the dataset"
-    )
-    parser.add_argument(
-        "--modelpath",
-        type=str,
-        required=False,
-        help="Specifies the path for the model"
-    )
-    
-    args = parser.parse_args()
-    n_clients = args.nclients
-    id = args.partition
-    dataset_name = args.dataset
-    filename = args.filepath
+    # Parse command line arguments
+    n_clients, id, filename, dataset_name, model_path, model_type = main_utils.parse_arg_client()
+
     dirname = ""
-    model_path = args.modelpath
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -163,42 +115,13 @@ def main() -> None:
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
-    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
-    ds_path=""
-    mapping = {}
-    reversed_mapping = {}
-    if "scdg1" in dataset_name:
-        mapping = read_mapping("./mapping_scdg1.txt")
-        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
-    else:
-        ds_path = "./databases/examples_samy/BODMAS/01"
-        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-        mapping = read_mapping("./mapping.txt")
-        reversed_mapping = read_mapping_inverse("./mapping.txt")
-    
-    if "scdg1" == dataset_name:
-        ds_path = "./databases/scdg1"
-        families=os.listdir(ds_path)
-        
-    if dataset_name == "split_scdg1":
-        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
-    else:
-        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
     #Model
-    batch_size = 32
-    hidden = 64
-    num_classes = len(families)
-    num_layers = 2#5
-    drop_ratio = 0.5
-    residual = False
-    #model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
-    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    
-    if model_path is not None:
-        model = torch.load(model_path)
+    model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
+
     #Client
     client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")

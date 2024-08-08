@@ -22,6 +22,7 @@ from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 
 from pathlib import Path
 import numpy as np
+import main_utils
 
 import SemaClassifier.classifier.GNN.gnn_main_script as main_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
@@ -108,68 +109,7 @@ def get_aggregate_evaluate_fn(model: torch.nn.Module, valset,id,metrics):
 
 def main():
     #Parse command line argument `nclients`
-    parser = argparse.ArgumentParser(description="Flower")    
-    parser.add_argument(
-        "--nclients",
-        type=int,
-        default=1,
-        choices=range(1, 10),
-        required=False,
-        help="Specifies the number of clients. \
-        Picks partition 1 by default",
-    )
-    parser.add_argument(
-        "--nrounds",
-        type=int,
-        default=3,
-        choices=range(1, 100),
-        required=False,
-        help="Specifies the number of rounds of FL. \
-        Picks partition 3 by default",
-    )
-    parser.add_argument(
-        "--filepath",
-        type=str,
-        required=False,
-        help="Specifies the path for storing results"
-    )
-    parser.add_argument(
-        "--dataset",
-        default = "",
-        type=str,
-        required=False,
-        help="Specifies the path for the dataset",
-    )
-    parser.add_argument(
-        "--noce",
-        action="store_false",
-        help="Specifies if there is contribution evaluation or not",
-    )
-
-    parser.add_argument(
-        "--methodo",
-        default = "",
-        type=str,
-        required=False,
-        help="Specifies the methodology used to deal with client that have low SV"
-    )
-    parser.add_argument(
-        "--threshold",
-        default = -1.0,
-        type=float,
-        required=False,
-        help="Specifies the threshold to delete clients"
-    )
-    
-    args = parser.parse_args()
-    n_clients = args.nclients
-    id = n_clients
-    nrounds = args.nrounds
-    dataset_name = args.dataset
-    methodo = args.methodo
-    threshold = args.threshold
-    filename = args.filepath
-    ce=args.noce
+    n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path = main_utils.parse_arg_server()
     dirname=""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
@@ -184,29 +124,8 @@ def main():
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
-    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
-    ds_path=""
-    mapping = {}
-    reversed_mapping = {}
-    if "scdg1" in dataset_name:
-        mapping = read_mapping("./mapping_scdg1.txt")
-        reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
-    else:
-        ds_path = "./databases/examples_samy/BODMAS/01"
-        families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
-        mapping = read_mapping("./mapping.txt")
-        reversed_mapping = read_mapping_inverse("./mapping.txt")
-    
-    if "scdg1" == dataset_name:
-        ds_path = "./databases/scdg1"
-        families=os.listdir(ds_path)
-    
-    if dataset_name == "split_scdg1":
-        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
-    else:
-        full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping = main_utils.init_datasets(dataset_name, n_clients, id)
     GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
-
 
     #Model
     batch_size = 32
@@ -215,16 +134,17 @@ def main():
     num_layers = 2#5
     drop_ratio = 0.5
     residual = False
-    # model = GINJKFlag(test_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
-    model = GINE(hidden, num_classes, num_layers).to(DEVICE)
+    model = main_utils.get_model(model_type, families, full_train_dataset, model_path)
     model_parameters = [val.cpu().numpy() for _, val in model.state_dict().items()]
-    metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset),"labels":str(y_test)})
-    with open(filename2,"w") as f:
-        f.write("n_clients: " + str(n_clients) + "\n")
-        f.write("nrounds: " + str(nrounds) + "\n")
-        f.write("dataset_name: " + str(dataset_name) + "\n")
-        f.write("methodo: " + str(methodo) + "\n")
-        f.write("threshold: " + str(threshold) + "\n")
+    if filename is not None:
+        metrics_utils.write_model(filename1,{"model":model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":ds_path,"families":families,"mapping":mapping,"reversed_mapping":reversed_mapping,"full_train_dataset":len(full_train_dataset),"test_dataset":len(test_dataset),"labels":str(y_test)})
+        with open(filename2,"w") as f:
+          f.write("n_clients: " + str(n_clients) + "\n")
+          f.write("nrounds: " + str(nrounds) + "\n")
+          f.write("dataset_name: " + str(dataset_name) + "\n")
+          f.write("methodo: " + str(methodo) + "\n")
+          f.write("threshold: " + str(threshold) + "\n")
+    
     
     # FL strategy
     strategy = fl.server.strategy.FedAvg(#fl.server.strategy.FedAvg(

@@ -1,6 +1,6 @@
 #!/bin/bash
-declare -i nclients="9"
-declare -i nrounds="20"
+declare -i nclients="3"
+declare -i nrounds="1"
 declare -i ntimes="1"
 filepath="./results/loop3"
 filename="./results/xp.txt"
@@ -10,7 +10,7 @@ dataset="split_scdg1"
 
 
 #for ((l=10; l<11; l++)); do
-for ((k=8; k<nclients; k++)); do
+for ((k=2; k<nclients; k++)); do
     for ((j=0; j<ntimes;j++)); do
         echo "Starting server $j"
         pids=()
@@ -21,10 +21,6 @@ for ((k=8; k<nclients; k++)); do
         python ./FL/fl_server_enc.py --nclients=${k} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
         pids+=($!)
         sleep 30
-    
-        echo "Starting CE server"
-        python ./FL/fl_ce_server.py --nclients=${k} --filepath=${filepath} --dataset=${dataset} --enc| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f & #--dataset=${dataset}&
-        pids+=($!)
     
         for ((i=0; i<$k; i++)); do
             echo "Starting client $i"
