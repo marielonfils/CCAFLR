@@ -1,31 +1,25 @@
-"""Flower server example."""
-
-
-import torch
-import flwr as fl
-from typing import Dict, Optional, Tuple
-from collections import OrderedDict
-import argparse
-
 import sys
 import os
 cwd=os.getcwd()
 sys.path.insert(0, cwd)
-from FL.CE_client_manager import CEClientManager
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
-
+#classifiers
+import torch
 from SemaClassifier.classifier.GNN import GNN_script
-from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inverse
-from torch_geometric.loader import DataLoader
-from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
-from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
+import main_utils
+import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
+from SemaClassifier.classifier.Images import ImageClassifier as img
+#flower
+import flwr as fl
+from FL.CE_client_manager import CEClientManager
 
 from pathlib import Path
 import numpy as np
-import main_utils
+from typing import Dict, Optional, Tuple
+from collections import OrderedDict
 
-import SemaClassifier.classifier.GNN.gnn_main_script as main_script
-import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
+
+
 import time
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -70,7 +64,8 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id,y_test,dirname):
         if dirname is not None:
             torch.save(model,f"{dirname}/model_server_{server_round}.pt")
         
-        test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
+        #test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
+        accuracy, loss, y_pred =img.test(model,valset, 16, id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
         GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)

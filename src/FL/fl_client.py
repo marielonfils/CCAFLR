@@ -9,6 +9,7 @@ sys.path.append('../../../../../TenSEAL')
 import torch
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
+from SemaClassifier.classifier.Images import ImageClassifier  as img
 
 import main_utils
 import flwr as fl
@@ -67,9 +68,11 @@ class GNNClient(fl.client.NumPyClient):
         self.global_model = copy.deepcopy(self.model)
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
-        test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
-        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
+        m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
         torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         p = self.get_parameters(config={})
@@ -83,7 +86,8 @@ class GNNClient(fl.client.NumPyClient):
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
         #self.set_parameters(parameters)
-        test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
         GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)

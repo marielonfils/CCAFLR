@@ -1,13 +1,13 @@
 #!/bin/bash
-declare -i nclients="2"
-declare -i nrounds="2"
-declare -i ntimes="1"
-filepath="./results/loop4"
-filename="./results/xp.txt"
-filepre="./results/loop4/xp_101_noenc_noce_"
+declare -i nclients="9"
+declare -i nrounds="60"
+declare -i ntimes="5"
+filepath="./results_images/loop4"
+filename="./results_images/xp.txt"
+filepre="./results_images/loop4/xp_101_noenc_noce_"
 fileext=".txt"
-dataset="split_scdg1"
-
+dataset="images"#"split_scdg1"
+model="images"
 
 
 for ((j=0; j<ntimes;j++)); do
@@ -17,13 +17,13 @@ for ((j=0; j<ntimes;j++)); do
     f="${filepre}${nclients}_${nrounds}${fileext}"
     echo -n $current_date_time >> $f
     echo $f
-    python ./FL/fl_server.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
+    python ./FL/fl_server.py --nclients=${nclients} --nrounds=${nrounds} --filepath=${filepath} --dataset=${dataset} --noce --model=${model}| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
     pids+=($!)
     sleep 40
 
     for ((i=0; i<nclients; i++)); do
         echo "Starting client $i"
-        python ./FL/fl_client.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} | awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
+        python ./FL/fl_client.py --nclients=${nclients} --partition=${i} --filepath=${filepath} --dataset=${dataset} --model=${model}| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f &
         pids+=($!)
     done
 

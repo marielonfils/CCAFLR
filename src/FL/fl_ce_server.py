@@ -4,6 +4,7 @@ cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
+from SemaClassifier.classifier.Images import ImageClassifier as img
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 import torch
 import main_utils
@@ -47,7 +48,8 @@ class CEServer(fl.client.NumPyClient):
         
     def utility(self, S):
         if S == ():
-            test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+            #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+            test_time, loss, y_pred =img.test(self.model,self.testset,BATCH_SIZE_TEST,id)
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             return float(accuracy)
         l = len(S)
@@ -59,7 +61,8 @@ class CEServer(fl.client.NumPyClient):
         params_dict = zip(temp_model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         temp_model.load_state_dict(state_dict, strict=True)
-        test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        #test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred =img.test(temp_model,self.testset, BATCH_SIZE_TEST,id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(bal_acc)
 
@@ -88,7 +91,8 @@ class CEServer(fl.client.NumPyClient):
         if self.enc:
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters)
-        test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
+        test_time, loss, y_pred =img.test(self.model,self.testset, BATCH_SIZE_TEST, id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
         
