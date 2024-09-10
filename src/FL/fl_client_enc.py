@@ -210,9 +210,9 @@ def main() -> None:
     
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
-    #with open(filename,'a') as f:
-    #    f.write(str(y_test)+"\n")
-    #return filename
+    with open(filename,'a') as f:
+        f.write(str(y_test)+"\n")
+    return filename
     
 if __name__ == "__main__":
     main()
