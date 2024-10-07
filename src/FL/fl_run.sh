@@ -6,7 +6,7 @@ filepath="./results_images/loop4"
 filename="./results_images/xp.txt"
 filepre="./results_images/loop4/xp_101_noenc_noce_"
 fileext=".txt"
-dataset="images"#"split_scdg1"
+dataset="images" #"split_scdg1"
 model="images"
 
 

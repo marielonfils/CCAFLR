@@ -29,7 +29,7 @@ BATCH_SIZE_TEST=32
 class CEServer(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, testset, y_test, id, enc, filename=None) -> None:
+    def __init__(self, model, testset, y_test, id, enc, model_type, filename=None) -> None:
         super().__init__()
         self.t = time.time()
         self.model = model
@@ -42,6 +42,7 @@ class CEServer(fl.client.NumPyClient):
         self.enc = enc
         self.filename=filename
         (self.publickey, self.privatekey) = rsa.newkeys(2048)
+        self.model_type = model_type
     
     def identify(self):
         return [str(self.publickey.n), str(self.publickey.e)]
@@ -49,7 +50,8 @@ class CEServer(fl.client.NumPyClient):
     def utility(self, S):
         if S == ():
             #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-            test_time, loss, y_pred =img.test(self.model,self.testset,BATCH_SIZE_TEST,id)
+            #test_time, loss, y_pred =img.test(self.model,self.testset,BATCH_SIZE_TEST,id)
+            test_time, loss, y_pred = main_utils.test(self.model_type, self.model,self.testset,BATCH_SIZE_TEST,id)
             accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
             return float(accuracy)
         l = len(S)
@@ -62,7 +64,8 @@ class CEServer(fl.client.NumPyClient):
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
         temp_model.load_state_dict(state_dict, strict=True)
         #test_time, loss, y_pred = GNN_script.test(temp_model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        test_time, loss, y_pred =img.test(temp_model,self.testset, BATCH_SIZE_TEST,id)
+        #test_time, loss, y_pred =img.test(temp_model,self.testset, BATCH_SIZE_TEST,id)
+        test_time, loss, y_pred = main_utils.test(self.model_type,temp_model,self.testset,BATCH_SIZE_TEST,id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(bal_acc)
 
@@ -92,7 +95,8 @@ class CEServer(fl.client.NumPyClient):
             parameters = self.reshape_parameters(parameters)
         self.set_parameters(parameters)
         #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        test_time, loss, y_pred =img.test(self.model,self.testset, BATCH_SIZE_TEST, id)
+        #test_time, loss, y_pred =img.test(self.model,self.testset, BATCH_SIZE_TEST, id)
+        test_time, loss, y_pred = main_utils.test(self.model_type,self.model,self.testset,BATCH_SIZE_TEST,self.id)
         accuracy, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
         
@@ -144,7 +148,7 @@ def main() -> None:
 
     #Dataset Loading
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+    main_utils.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
 
 
     #Model
@@ -152,7 +156,7 @@ def main() -> None:
 
     
     #Starting client
-    client = CEServer(model, test_dataset, y_test, id, enc, filename)
+    client = CEServer(model, test_dataset, y_test, id, enc, model_type,filename)
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
 
 if __name__ == "__main__":

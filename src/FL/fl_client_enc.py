@@ -38,7 +38,7 @@ BATCH_SIZE_TEST=32
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None, dirname=None ) -> None:
+    def __init__(self, model, trainset, testset,y_test,id,model_type,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
         self.model = model
         self.trainset = trainset
@@ -59,6 +59,7 @@ class GNNClient(fl.client.NumPyClient):
         self.train_time = 0
         self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
         self.publickey = ""
+        self.model_type=model_type
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
         if pk is None: #generate random a for pk
@@ -145,11 +146,12 @@ class GNNClient(fl.client.NumPyClient):
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
         #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
+        #m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
+        m,loss=main_utils.train(self.model_type,self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
         torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
-        GNN_script.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
+        main_utils.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
         return self.get_parameters(config={}), len(self.trainset), loss
 
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
@@ -159,7 +161,7 @@ class GNNClient(fl.client.NumPyClient):
             N=1
         self.set_parameters(parameters,N)
         accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
+        main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(accuracy)}
     
     def evaluate_enc(self, parameters: List[np.ndarray], config=None, reshape = False
@@ -170,7 +172,8 @@ class GNNClient(fl.client.NumPyClient):
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
         #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        test_time, loss, y_pred = main_utils.test(self.model_type,self.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
         GNN_script.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
@@ -203,7 +206,7 @@ def main() -> None:
     model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
     
     #Client
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
+    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname, model_type=model_type)
     from torchvision.transforms import transforms
     from torch.utils.data import DataLoader
 

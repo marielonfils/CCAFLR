@@ -13,6 +13,9 @@ from SemaClassifier.classifier.Images.ImageClassifier import split,ConvNet,Image
 import torch
 from torchvision.transforms import transforms
 
+from SemaClassifier.classifier.Images import ImageClassifier  as img
+import SemaClassifier.classifier.GNN.GNN_script as GNN_script
+
 
 DEVICE: str = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -280,3 +283,29 @@ def get_model(model_type,families,full_train_dataset,model_path=None):
             model=ConvNet(14)
     
     return model
+
+def train(model_type, model, trainset, batch_size, epochs,id, device=None ):
+    if model_type == "GINE":
+        m, loss = GNN_script.train(model, trainset, batch_size,epochs,device,id)
+    elif model_type == "images":
+        m,loss=img.train(model,trainset,batch_size,epochs,id)
+    return m,loss
+
+def test(model_type, model, testset, batch_size, id, device=None):
+    if model_type == "GINE":
+        test_time, loss, y_pred = GNN_script.test(model, testset, batch_size, DEVICE,id)
+    elif model_type == "images":
+        test_time, loss, y_pred = img.test(model,testset,batch_size,id)
+    return test_time, loss, y_pred
+
+colours = ['\033[32m', '\033[33m', '\033[34m', '\033[35m','\033[36m', '\033[37m', '\033[90m', '\033[91m', '\033[92m', '\033[93m', '\033[94m', '\033[95m', '\033[96m']
+reset = '\033[0m'
+bold = '\033[01m'
+disable = '\033[02m'
+underline = '\033[04m'
+reverse = '\033[07m'
+strikethrough = '\033[09m'
+invisible = '\033[08m'
+default='\033[00m'
+def cprint(text,id):
+    print(f'{colours[id%13]} {text}{default}')
