@@ -84,7 +84,7 @@ def get_evaluate_fn(model: torch.nn.Module, valset,id):
 
     return evaluate
 
-def get_evaluate_enc_fn(model: torch.nn.Module, valset,id,y_test, dirname):
+def get_evaluate_enc_fn(model_type,model: torch.nn.Module, valset,id,y_test, dirname):
     """Return an evaluation function for server-side evaluation."""
 
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
@@ -104,7 +104,8 @@ def get_evaluate_enc_fn(model: torch.nn.Module, valset,id,y_test, dirname):
         if dirname is not None:
             torch.save(model,f"{dirname}/model_server_{server_round}.pt")
         #test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
-        test_time, loss, y_pred =img.test(model,valset, 16,id)
+        #test_time, loss, y_pred =img.test(model,valset, 16,id)
+        test_time, loss, y_pred = main_utils.test(model_type,model,valset,16,id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
         GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
@@ -144,7 +145,7 @@ def get_aggregate_evaluate_enc_fn(model: torch.nn.Module, valset,id,metrics):
 def main():
     #Parse command line argument `nclients`
     n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path = main_utils.parse_arg_server()
-    dirname=""
+    dirname=None
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")
@@ -187,7 +188,7 @@ def main():
         min_fit_clients=n_clients,#2,  # Minimum number of clients used for training at each round (override `fraction_fit`)
         min_evaluate_clients=n_clients,  # Minimum number of clients used for testing at each round 
         min_available_clients=n_clients,#2,  # Minimum number of all available clients to be considered
-        evaluate_fn=get_evaluate_enc_fn(model, test_dataset, id,y_test, dirname),  # Evaluation function used by the server 
+        evaluate_fn=get_evaluate_enc_fn(model_type,model, test_dataset, id,y_test, dirname),  # Evaluation function used by the server 
         evaluate_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
         fit_metrics_aggregation_fn=get_aggregate_evaluate_enc_fn(model, test_dataset, id,["accuracy","precision","recall","f1","balanced_accuracy","loss","test_time","train_time"]),
         on_fit_config_fn=fit_config,  # Called before every round

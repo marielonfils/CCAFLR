@@ -143,12 +143,14 @@ class GNNClient(fl.client.NumPyClient):
                 parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters, config)
         self.global_model = copy.deepcopy(self.model)
-        torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
+        if self.dirname is not None:
+            torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
         #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
         #m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
         m,loss=main_utils.train(self.model_type,self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
-        torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
+        if self.dirname is not None:
+            torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
         main_utils.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
@@ -185,7 +187,7 @@ def main() -> None:
     # Parse command line arguments
     n_clients, id, filename, dataset_name, model_path, model_type = main_utils.parse_arg_client()
 
-    dirname=""
+    dirname=None
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
         timestr2 = time.strftime("%Y%m%d-%H%M")

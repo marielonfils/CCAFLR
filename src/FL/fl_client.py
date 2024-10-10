@@ -33,7 +33,7 @@ BATCH_SIZE_TEST=32
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,y_test,id,pk=None,filename=None, dirname=None ) -> None:
+    def __init__(self, model, trainset, testset,y_test,id,model_type,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
         self.model = model
         self.trainset = trainset
@@ -46,6 +46,7 @@ class GNNClient(fl.client.NumPyClient):
         self.global_model = model
         self.publickey = ""
         self.round=0
+        self.model_type=model_type
     
     def set_public_key(self, rsa_public_key):
         self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
@@ -69,15 +70,17 @@ class GNNClient(fl.client.NumPyClient):
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
         #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        test_time, loss, y_pred = main_utils.test(self.model_type,self.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
+        #m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
+        m,loss=main_utils.train(self.model_type,self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
         torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
         p = self.get_parameters(config={})
         l=loss["loss"]
-        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {l}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
+        main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {l}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
 
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss["loss"], self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
 
@@ -87,10 +90,11 @@ class GNNClient(fl.client.NumPyClient):
     ) -> Tuple[float, int, Dict]:
         #self.set_parameters(parameters)
         #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
+        test_time, loss, y_pred = main_utils.test(self.model_type,self.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
-        GNN_script.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
+        main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
         return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
@@ -120,14 +124,14 @@ def main() -> None:
 
     #Dataset Loading
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+    main_utils.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
     
 
     #Model
     model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
 
     #Client
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname)
+    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id,model_type, filename=filename, dirname=dirname)
     #torch.save(model, f"HE/GNN_model.pt")
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
     with open(filename,'a') as f:

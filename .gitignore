@@ -13,6 +13,7 @@ __pycache__/
 #results
 *.csv
 src/results/*
+src/results_image*/*
 !src/results/plot_results.py
 !src/results/plot.py
 
@@ -170,5 +171,5 @@ cython_debug/
 #.idea/
 
 #database
-src/databases/Images
+src/databases/Images/*
 
