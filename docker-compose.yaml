@@ -1,0 +1,31 @@
+name: 'EFL'
+
+services:
+  flsrv:
+    image: ccaflr
+    networks:
+      - fl
+    entrypoint: [ "bash", "-c", "FL/docker_se.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL}"]
+    volumes:
+      - ${FILEPATH}/:/results
+      - ${DATABASEPATH}/:/ccaflr/databases
+      - /var/run/docker.sock:/var/run/docker.sock
+  flcl:
+    image: ccaflr
+    networks:
+      - fl
+    deploy:
+      mode: replicated
+      replicas: ${NCLIENTS}
+    entrypoint: [ "bash", "-c", "FL/docker_cl.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL}"]
+    volumes:
+      - ${FILEPATH}/:/results
+      - ${DATABASEPATH}/:/ccaflr/databases
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  fl:
+    driver: bridge
+
+volumes:
+  fl-results:

@@ -13,10 +13,10 @@ For the moment, this repository implements a **secure** federated learning frame
 ## Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
+- [Docker](#docker)
 
 
 ## Installation
-Works with **Python 3.10.12**.
 1. Clone the repository:
 ```bash
  git clone git@github.com:marielonfils/CCAFLR.git
@@ -65,7 +65,23 @@ python FL/fl_client_enc.py --nclients [number of clients] --partition [id of the
 The *dataset* option specifies the dataset at *src/databases* with the 70% of the data shared equitably among 8 clients and 30% given to the server.
 To run the federated learning tast without encryption, replace the filenames of the server and the clients by *fl_server.py* and *fl_client.py*, respectively and remove the *enc** option from the CE server command.
 
+## Docker Installation and Usage
+Docker image can be created with
+```bash
+docker build ./ -t ccaflr
+```
+Note that the build takes about 25-30 minutes.
 
+To run the **secure** federated learning framework (without contribution evaluation) on a single machine docker compose can be used
+```bash
+docker compose up -d
+```
+
+*.env* file contains parameters for docker compose: number of clients, number of rounds, dataset name, model name, path to the dataset, and path to a folder to output results.
+Latest execution logs can be checked with
+```bash
+docker compose logs
+```
 
 
 ## References
