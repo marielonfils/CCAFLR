@@ -4,11 +4,16 @@ cwd=os.getcwd()
 sys.path.insert(0, cwd)
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/GNN")
 sys.path.insert(0, cwd+"/SemaClassifier/classifier/Images/")
+sys.path.insert(0, cwd+"/SemaClassifier/classifier/Breast")
 from SemaClassifier.classifier.Images import ImageClassifier  as img
+from SemaClassifier.classifier.Breast import breast_classifier as bc
 import SemaClassifier.classifier.GNN.GNN_script as GNN_script
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
+from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
+from SemaClassifier.classifier.Breast.breast_classifier import MobileNet
 import torch
 import main_utils
+import parse_args
 
 from AESCipher import AESCipher
 import secrets
@@ -35,31 +40,33 @@ BATCH_SIZE=16
 EPOCHS=5
 BATCH_SIZE_TEST=32
 
-class GNNClient(fl.client.NumPyClient):
+class EncClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, model, trainset, testset,y_test,id,model_type,pk=None,filename=None, dirname=None ) -> None:
+    def __init__(self,model_class, dataset,id,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
-        self.model = model
-        self.trainset = trainset
-        self.testset = testset
+        #self.model = model
+        self.d = dataset
         self.id=id
+        self.shapes = None
+        self.global_model = model_class.model
+        self.round = 0
+        self.m=model_class      
+
+        #xMK CKKS context, sk, pk
         self.context = None
         self._sk = None
         self.pk = None
-        self.parms = None
-        self.n = None
-        self.shapes = None
-        self.global_model = model
-        self.round = 0
-        
-        self.y_test= y_test
+        self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
+                
+        # File to save results
         self.filename = filename
         self.dirname = dirname
         self.train_time = 0
-        self.set_context(8192,[60, 40, 40, 60] 	,2**40,pk)
+
+        #RSA public key
         self.publickey = ""
-        self.model_type=model_type
+        
     
     def set_context(self, poly_mod_degree, coeff_mod_bit_sizes,scale,pk=None):
         if pk is None: #generate random a for pk
@@ -90,10 +97,10 @@ class GNNClient(fl.client.NumPyClient):
         return self.context,encrypted_vector.decryption_share(self.context,self._sk)  
 
     def get_parameters(self, config: Dict[str, str]=None) -> List[np.ndarray]:
-        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.m.model.state_dict().items()]
     
     def get_parameters_flat(self, config: Dict[str, str]=None) -> List[np.ndarray]:
-        return [val.cpu().numpy().flatten() for _, val in self.model.state_dict().items()]
+        return [val.cpu().numpy().flatten() for _, val in self.m.model.state_dict().items()]
     
     def get_parms_enc(self, train=False) -> List[np.ndarray]:
         parms =  self.get_parameters_flat(config={})
@@ -107,7 +114,7 @@ class GNNClient(fl.client.NumPyClient):
         return
         
     def get_gradients(self):
-        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.m.model.state_dict().items()]
         characters = string.ascii_letters + string.digits + string.punctuation
         AESKEY = ''.join(secrets.choice(characters) for _ in range(245))
         encrypted_parameters = AESCipher(AESKEY).encrypt(parameters)
@@ -115,10 +122,10 @@ class GNNClient(fl.client.NumPyClient):
         return encrypted_key + encrypted_parameters
     
     def set_parameters(self, parameters: List[np.ndarray], N:int) -> None:
-        self.model.train()
-        params_dict = zip(self.model.state_dict().keys(), parameters)
+        self.m.model.train()
+        params_dict = zip(self.m.model.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v.astype('f')) for k, v in params_dict})
-        self.model.load_state_dict(state_dict, strict=True)
+        self.m.model.load_state_dict(state_dict, strict=True)
 
     def reshape_parameters(self,parameters):
         p=[]
@@ -131,61 +138,49 @@ class GNNClient(fl.client.NumPyClient):
                 p.append(np.array(parameters[offset:(offset+n)],dtype=object).reshape(s))
             offset+=n
         return np.array(p,dtype=object)
-    
-    def fit(self, parameters: List[np.ndarray], config:Dict[str,str], flat=False) -> Tuple[List[np.ndarray], int, Dict]:
-        self.set_parameters(parameters, config["N"])
-        m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        return self.get_parameters(config={}), len(self.trainset), loss    
-    
+        
     def fit_enc(self, parameters: List[np.ndarray], config:Dict[str,str],flat=True) -> Tuple[List[np.ndarray], int, Dict]:
+        # set parameters
         if not(parameters != None and len(parameters) == 1):
             if flat:
                 parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters, config)
-        self.global_model = copy.deepcopy(self.model)
+        # save global model
+        self.global_model = copy.deepcopy(self.m.model)
         if self.dirname is not None:
             torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
-        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        #m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
-        m,loss=main_utils.train(self.model_type,self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
+        #train model
+        _,loss=self.m.train(self.m.model,self.d.trainset,EPOCHS,BATCH_SIZE,DEVICE,self.id)
+        #save local model
         if self.dirname is not None:
-            torch.save(self.model,f"{self.dirname}/model_local_{self.round}.pt")
+            torch.save(self.m.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!SELF_TRAIN_TIME",self.train_time)
         main_utils.cprint(f"Client {self.id}: Fitting loss, {loss}", self.id)
-        return self.get_parameters(config={}), len(self.trainset), loss
 
-    def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
-    ) -> Tuple[float, int, Dict]:
-        N=config.get("N")
-        if N is None:
-            N=1
-        self.set_parameters(parameters,N)
-        accuracy, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {accuracy}, {loss}", self.id)
-        return float(loss), len(self.testset), {"accuracy": float(accuracy)}
+        return self.get_parameters(config={}), len(self.d.trainset), loss
     
     def evaluate_enc(self, parameters: List[np.ndarray], config=None, reshape = False
     ) -> Tuple[float, int, Dict]:
+        
         if parameters != None and len(parameters.parameters.tensors) == 1: #TODO check condition parameters is a FitIns instance
-            return 0.0,len(self.testset),{}
+            return 0.0,len(self.d.testset),{}
+        # set parameters
         if reshape:
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
-        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
-        test_time, loss, y_pred = main_utils.test(self.model_type,self.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
-        acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
-        metrics_utils.write_to_csv([str(self.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
+        #evaluate
+        test_time, loss, y_pred = self.m.test(self.m.model,self.d.testset,BATCH_SIZE_TEST,DEVICE,self.id)
+        acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.d.y_test, y_pred)
+        metrics_utils.write_to_csv([str(self.m.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
         GNN_script.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
-        return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
+        return float(loss), len(self.d.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
 
 def main() -> None:
 
     # Parse command line arguments
-    n_clients, id, filename, dataset_name, model_path, model_type = main_utils.parse_arg_client()
+    n_clients, id, filename, dataset_name, model_path, model_type = parse_args.parse_arg_client()
 
     dirname=None
     if filename is not None:
@@ -200,23 +195,42 @@ def main() -> None:
 
 
     #Dataset Loading
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+    #init_db = main_utils.init_datasets_split_scdg1
+    #init_db=bc.init_datasets_breast
+    #Dataset attributes are : trainset, y_train, testset, y_test, classes, others
+    #d = main_utils.Dataset(init_db)
+    # Modify the call to init_db to match the function signature
+    #d.init_db(id)
+    #d.init_db(n_clients,id)
+
+    #Modify the init_datasets function in main_utils
+    d= main_utils.init_datasets(dataset_name, n_clients, id)
+    GNN_script.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
     
 
     #Model
-    model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
+    #Modify model here
+    #model=GINE(64,len(d.classes), 2).to(DEVICE)
+    #model=MobileNet(0.1,0.7,num_classes=2)
+    #Modify the get_model function in main_utils
+    #Initialize Model object with ML model, train function and test function
+    #Modify train and test functions here
+    
+    #m=main_utils.Model(model,GNN_script.train, GNN_script.test)
+    #m=main_utils.Model(model,bc.train, bc.test)
+    m = main_utils.get_model(model_type, d.classes, d.trainset)
+
     
     #Client
-    client = GNNClient(model, full_train_dataset, test_dataset,y_test,id, filename=filename, dirname=dirname, model_type=model_type)
-    from torchvision.transforms import transforms
-    from torch.utils.data import DataLoader
+    client = EncClient(m, d,id,  filename=filename, dirname=dirname)
 
     
     #torch.save(model, f"HE/GNN_model.pt")
+    # Start Flower client
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
+    # Write results
     with open(filename,'a') as f:
-        f.write(str(y_test)+"\n")
+        f.write(str(d.y_test)+"\n")
     return filename
     
 if __name__ == "__main__":

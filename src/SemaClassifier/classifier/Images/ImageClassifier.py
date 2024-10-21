@@ -6,6 +6,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from PIL import Image
 import numpy as np
 import time
+from torchvision.transforms import transforms
 
 colours = ['\033[32m', '\033[33m', '\033[34m', '\033[35m','\033[36m', '\033[37m', '\033[90m', '\033[91m', '\033[92m', '\033[93m', '\033[94m', '\033[95m', '\033[96m']
 reset = '\033[0m'
@@ -84,6 +85,24 @@ def split(path):
         test_y.append(label)
         
     return train,train_y, test, test_y, [],[]
+
+def init_datasets_images(n_clients, id):
+    if n_clients == id:
+        path = "./databases/Images/server"
+    else:
+        path = "./databases/Images/client"+str(id+1)
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = split(path)
+    families=[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+    transforms_train = transforms.Compose([transforms.Resize((128, 128)),
+                                    transforms.RandomRotation(10.),
+                                    transforms.ToTensor()])
+
+    transforms_test = transforms.Compose([transforms.Resize((128, 128)),
+                                        transforms.ToTensor()])
+    full_train_dataset=ImagesDataset(full_train_dataset,y_full_train,transforms_train)
+    test_dataset=ImagesDataset(test_dataset,y_test,transform=transforms_test)
+    return full_train_dataset, y_full_train, test_dataset, y_test,  families, {"label":label, "fam_idx": fam_idx, "ds_path":path, "mapping":{}, "reversed_mapping":{}} 
+
 
 def preprocess_image2(img_path):
     img = Image.open(img_path).convert('RGB')
