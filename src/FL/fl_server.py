@@ -66,10 +66,10 @@ def get_evaluate_fn(m, valset,id,y_test,dirname):
             torch.save(m.model,f"{dirname}/model_server_{server_round}.pt")
         
         #test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
-        test_time, loss, y_pred =img.test(m.model,valset, 16, id)
+        test_time, loss, y_pred =m.test(m.model,valset, 16, id)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
-        GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
+        main_utils.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
         
         return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0, "predictions": y_pred}#str(np.array_str(np.array(y_pred),max_line_width=10**50))}
 
@@ -120,22 +120,15 @@ def main():
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
-    #full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping = main_utils.init_datasets(dataset_name, n_clients, id)
     #Modify the init_datasets function in main_utils
     d= main_utils.init_datasets(dataset_name, n_clients, id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
+    main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
 
     #Model
-    batch_size = 32
-    hidden = 64
-    num_classes = len(d.classes)
-    num_layers = 2#5
-    drop_ratio = 0.5
-    residual = False
     m = main_utils.get_model(model_type, d.classes, d.trainset, model_path)
     model_parameters = [val.cpu().numpy() for _, val in m.model.state_dict().items()]
     if filename is not None:
-        metrics_utils.write_model(filename1,{"model":m.model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":d.others["ds_path"],"families":d.classes,"mapping":d.others["mapping"],"reversed_mapping":d.others["reversed_mapping"],"full_train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)})
+        metrics_utils.write_model(filename1,{"model":m.model.__class__.__name__,"batch_size":m.parameters.batch_size,"hidden":m.parameters.hidden,"num_classes":m.parameters.num_classes,"num_layers":m.parameters.num_layers,"drop_ratio":m.parameters.drop_ratio,"residual":m.parameters.residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":d.others["ds_path"],"families":d.classes,"mapping":d.others["mapping"],"reversed_mapping":d.others["reversed_mapping"],"full_train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)})
         with open(filename2,"w") as f:
           f.write("n_clients: " + str(n_clients) + "\n")
           f.write("nrounds: " + str(nrounds) + "\n")

@@ -19,7 +19,7 @@ class MobileNet(nn.Module):
     def __init__(self, learning_rate,reduce_lr_gamma,num_classes=2):
         super(MobileNet, self).__init__()
         self.layers = mobilenet_v2(pretrained=True,)
-        self.layers.classifier[1] = torch.nn.Linear(in_features=self.layers.classifier[1].in_features, out_features=10)
+        self.layers.classifier[1] = torch.nn.Linear(in_features=self.layers.classifier[1].in_features, out_features=num_classes)
         self.optimizer = optim.Adadelta(self.layers.parameters(), lr=learning_rate)
         self.scheduler = StepLR(self.optimizer, step_size=1, gamma=reduce_lr_gamma)
         self.num_classes=num_classes
@@ -54,7 +54,7 @@ def train(model, train_dataset,epochs,batch_size,id,*args, **kwargs):
     cprint('--------------------FIT OK----------------',id)
     return model, {'loss':loss.item(),"train_time":t}
 
-def test(model, test_dataset,id,*args, **kwargs):
+def test(model, test_dataset,batch_size, id,*args, **kwargs):
     test_loader = DataLoader(test_dataset, batch_size=32)
 
     t0=time.time()
@@ -119,18 +119,18 @@ def init_datasets_breast(nclients,id):
     patternOne = '*class1.png'
     classZero = fnmatch.filter(imagePatches, patternZero)
     classOne = fnmatch.filter(imagePatches, patternOne)
-    li=id*1000
-    ui=(id+1)*1000
+    li=id*100
+    ui=(id+1)*100
     X,Y = proc_images(li,ui,imagePatches,classZero,classOne)
     X2=np.array(X)
     X3=X2/255.0
 
     X_train, X_test, Y_train, Y_test = train_test_split(X3, Y, test_size=0.3)
     # Reduce Sample Size for DeBugging
-    X_train2 = X_train[0:300000] 
-    Y_train2 = Y_train[0:300000]
-    X_test2 = X_test[0:300000] 
-    Y_test2 = Y_test[0:300000]
+    X_train2 = X_train[0:3000] 
+    Y_train2 = Y_train[0:3000]
+    X_test2 = X_test[0:3000] 
+    Y_test2 = Y_test[0:3000]
 
     X_trainShape = X_train2.shape[1]*X_train2.shape[2]*X_train2.shape[3]
     X_testShape = X_test2.shape[1]*X_test2.shape[2]*X_test2.shape[3]

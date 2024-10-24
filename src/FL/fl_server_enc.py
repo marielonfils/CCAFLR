@@ -80,10 +80,10 @@ def get_evaluate_enc_fn( valset,id,y_test, dirname, m):
         m.model.load_state_dict(state_dict, strict=True)
         if dirname is not None:
             torch.save(m.model,f"{dirname}/model_server_{server_round}.pt")
-        test_time, loss, y_pred = m.test(m.model,valset,16,DEVICE,id)
+        test_time, loss, y_pred = m.test(m.model,valset,16,id,DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
-        GNN_script.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
+        main_utils.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
         
         return loss, {"accuracy": acc,"precision": prec,"recall": rec,"f1": f1,"balanced_accuracy": bal_acc,"loss": loss, "test_time": test_time, "train_time":0, "predictions": y_pred}
 
@@ -135,48 +135,19 @@ def main():
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
     
     #Dataset Loading
-    #Modify database initialization function here. THis function should return :
-    #   - trainset : list or pytorch Dataset containing the training data, 
-    #   - train labels : list containing the training labels, 
-    #   - testset : list or pytorch Dataset containing the test data,
-    #   - test labels : list containing the test labels,
-    #   - classes : list containing the classes names,
-    #   - others : dictionary with other return values
-    #init_db = main_utils.init_datasets_split_scdg1
-    #init_db = bc.init_datasets_breast
-    #Dataset attributes are : trainset, y_train, testset, y_test, classes, others
-    #d = main_utils.Dataset(init_db)
     # Modify the call to init_datasets
     d = main_utils.init_datasets(dataset_name, n_clients, id)
-    # Modify the call to init_db to match the function signature
-    #d.init_db(n_clients,id)
-    #d.init_db(id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
+    main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
 
     #Model Initialization
-    batch_size = 32
-    hidden = 64
-    num_classes = len(d.classes)
-    print("NUM_CLASSES",num_classes)
-    num_layers = 2#5
-    drop_ratio = 0.5
-    residual = False
-    #Modify model here
-    #model = GINE(hidden, num_classes, num_layers).to(DEVICE)
-    #model = bc.MobileNet(0.1,0.7,num_classes=2)
-    #mo= main_utils.get_model(model_type, d.classes, d.trainset)
-    #m = main_utils.Model(model, GNN_script.train, GNN_script.test)
-    #train_function = bc.train
-    #test_function = bc.test
-    #m = main_utils.Model(model, train_function, test_function)
-    #Modify the get_model function in main_utils
-    m = main_utils.get_model(model_type, d.classes, d.trainset)
+    #Modify model_type and get_model function in main_utils
+    m = main_utils.get_model(model_type, d.classes, d.trainset, model_path=model_path)
     model_parameters = [val.cpu().numpy() for _, val in m.model.state_dict().items()]
 
 
     #Save model and setup information
     if filename is not None:
-        dict ={"model":m.model.__class__.__name__,"batch_size":batch_size,"hidden":hidden,"num_classes":num_classes,"num_layers":num_layers,"drop_ratio":drop_ratio,"residual":residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"classes":d.classes,"train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)}
+        dict ={"model":m.model.__class__.__name__,"batch_size":m.parameters.batch_size,"hidden":m.parameters.hidden,"num_classes":m.parameters.num_classes,"num_layers":m.parameters.num_layers,"drop_ratio":m.parameters.drop_ratio,"residual":m.parameters.residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"classes":d.classes,"train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)}
         dict2={**dict,**d.others}
         metrics_utils.write_model(filename1,dict2)
         with open(filename2,"w") as f:

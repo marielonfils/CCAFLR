@@ -151,7 +151,7 @@ class EncClient(fl.client.NumPyClient):
             torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
         #train model
-        _,loss=self.m.train(self.m.model,self.d.trainset,EPOCHS,BATCH_SIZE,DEVICE,self.id)
+        _,loss=self.m.train(self.m.model,self.d.trainset,EPOCHS,BATCH_SIZE,self.id,DEVICE)
         #save local model
         if self.dirname is not None:
             torch.save(self.m.model,f"{self.dirname}/model_local_{self.round}.pt")
@@ -170,10 +170,10 @@ class EncClient(fl.client.NumPyClient):
             parameters = self.reshape_parameters(parameters)
             self.set_parameters(parameters,1)
         #evaluate
-        test_time, loss, y_pred = self.m.test(self.m.model,self.d.testset,BATCH_SIZE_TEST,DEVICE,self.id)
+        test_time, loss, y_pred = self.m.test(self.m.model,self.d.testset,BATCH_SIZE_TEST, self.id, DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.d.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.m.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
-        GNN_script.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
+        main_utils.cprint(f"Client {self.id}: loss {loss}, accuracy {acc}, precision {prec}, recall {rec}, f1-score {f1}, balanced accuracy {bal_acc}", self.id)
         return float(loss), len(self.d.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
 
@@ -195,35 +195,18 @@ def main() -> None:
 
 
     #Dataset Loading
-    #init_db = main_utils.init_datasets_split_scdg1
-    #init_db=bc.init_datasets_breast
-    #Dataset attributes are : trainset, y_train, testset, y_test, classes, others
-    #d = main_utils.Dataset(init_db)
-    # Modify the call to init_db to match the function signature
-    #d.init_db(id)
-    #d.init_db(n_clients,id)
-
     #Modify the init_datasets function in main_utils
     d= main_utils.init_datasets(dataset_name, n_clients, id)
-    GNN_script.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
+    main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
     
 
     #Model
-    #Modify model here
-    #model=GINE(64,len(d.classes), 2).to(DEVICE)
-    #model=MobileNet(0.1,0.7,num_classes=2)
-    #Modify the get_model function in main_utils
-    #Initialize Model object with ML model, train function and test function
-    #Modify train and test functions here
-    
-    #m=main_utils.Model(model,GNN_script.train, GNN_script.test)
-    #m=main_utils.Model(model,bc.train, bc.test)
-    m = main_utils.get_model(model_type, d.classes, d.trainset)
+    #Modify model_type here and get_model function in main_utils
+    m = main_utils.get_model(model_type, d.classes, d.trainset,model_path=model_path)
 
     
     #Client
     client = EncClient(m, d,id,  filename=filename, dirname=dirname)
-
     
     #torch.save(model, f"HE/GNN_model.pt")
     # Start Flower client

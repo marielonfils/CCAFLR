@@ -8,6 +8,7 @@ from SemaClassifier.classifier.Images import ImageClassifier as img
 import  SemaClassifier.classifier.GNN.gnn_helpers.metrics_utils as metrics_utils
 import torch
 import main_utils
+import parse_args
 
 import flwr as fl
 from AESCipher import AESCipher
@@ -135,7 +136,7 @@ class CEServer(fl.client.NumPyClient):
 def main() -> None:
 
     # Parse command line argument
-    n_clients, id, filename, dataset_name, model_path, model_type,enc = main_utils.parse_arg_client()
+    n_clients, id, filename, dataset_name, model_path, model_type,enc = parse_args.parse_arg_client()
     
     wo = ""
     if not enc:
@@ -147,16 +148,21 @@ def main() -> None:
     print("FFFNNN",filename)
 
     #Dataset Loading
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
-    main_utils.cprint(f"Client {id} : datasets length, {len(full_train_dataset)}, {len(test_dataset)}",id)
+    #full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
+    #Modify the init_datasets function in main_utils
+    d= main_utils.init_datasets(dataset_name, n_clients, id)
+
+    main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
 
 
     #Model
-    model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
+    #model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
+    #Modify the get_model function in main_utils
+    m = main_utils.get_model(model_type, d.classes, d.trainset, model_path=model_path)
 
     
     #Starting client
-    client = CEServer(model, test_dataset, y_test, id, enc, model_type,filename)
+    client = CEServer(m.model, d.testset, d.y_test, id, enc, model_type,filename)
     fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=client, root_certificates=Path("./FL/.cache/certificates/ca.crt").read_bytes())
 
 if __name__ == "__main__":

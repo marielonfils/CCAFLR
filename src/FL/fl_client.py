@@ -35,20 +35,22 @@ BATCH_SIZE_TEST=32
 class GNNClient(fl.client.NumPyClient):
     """Flower client implementing Graph Neural Networks using PyTorch."""
 
-    def __init__(self, m, trainset, testset,y_test,id,model_type,pk=None,filename=None, dirname=None ) -> None:
+    def __init__(self, m, dataset,y_test,id,model_type,pk=None,filename=None, dirname=None ) -> None:
         super().__init__()
         self.m = m
-        self.trainset = trainset
-        self.testset = testset
-        self.id=id
+        self.d =dataset
         self.y_test=y_test
+        self.id=id
+        self.round=0
+        self.model_type=model_type
+        self.global_model = m.model
+        #for storing results
         self.filename = filename
         self.dirname = dirname
         self.train_time = 0
-        self.global_model = m.model
+        #for RSA encryption
         self.publickey = ""
-        self.round=0
-        self.model_type=model_type
+        
     
     def set_public_key(self, rsa_public_key):
         self.publickey = rsa.PublicKey(int(rsa_public_key[0]),int(rsa_public_key[1]))
@@ -71,33 +73,25 @@ class GNNClient(fl.client.NumPyClient):
         self.global_model = copy.deepcopy(self.m.model)
         torch.save(self.global_model,f"{self.dirname}/model_global_{self.round}.pt")
         self.round+=1
-        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
-        test_time, loss, y_pred = main_utils.test(self.model_type,self.m.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
+        test_time, loss, y_pred = self.m.test(self.m.model,self.d.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
-        #m, loss = GNN_script.train(self.model, self.trainset, BATCH_SIZE, EPOCHS, DEVICE, self.id)
-        #m,loss=img.train(self.model,self.trainset,BATCH_SIZE,EPOCHS,self.id)
-        m,loss=main_utils.train(self.model_type,self.m.model,self.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
+        m,loss=self.m.train(self.m.model,self.d.trainset,BATCH_SIZE,EPOCHS,self.id,device=DEVICE)
         torch.save(self.m.model,f"{self.dirname}/model_local_{self.round}.pt")
         self.train_time=loss["train_time"]
-        p = self.get_parameters(config={})
         l=loss["loss"]
         main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {l}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
-
         metrics_utils.write_to_csv([str(self.m.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss["loss"], self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
 
-        return self.get_parameters(config={}), len(self.trainset) ,{"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss["loss"]),"test_time": float(test_time),"train_time":float(self.train_time)}
+        return self.get_parameters(config={}), len(self.d.trainset) ,{"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss["loss"]),"test_time": float(test_time),"train_time":float(self.train_time)}
     
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, str]
     ) -> Tuple[float, int, Dict]:
         #self.set_parameters(parameters)
-        #test_time, loss, y_pred = GNN_script.test(self.model, self.testset, BATCH_SIZE_TEST, DEVICE,self.id)
-        #test_time, loss, y_pred = img.test(self.model,self.testset,BATCH_SIZE_TEST,self.id)
-        test_time, loss, y_pred = main_utils.test(self.model_type,self.m.model,self.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
+        test_time, loss, y_pred = self.m.test(self.m.model,self.d.testset,BATCH_SIZE_TEST,self.id,device=DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(self.y_test, y_pred)
         metrics_utils.write_to_csv([str(self.m.model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, self.train_time, test_time, str(np.array_str(np.array(y_pred),max_line_width=10**50))], self.filename)
         main_utils.cprint(f"Client {self.id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", self.id)
-        return float(loss), len(self.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
+        return float(loss), len(self.d.testset), {"accuracy": float(acc),"precision": float(prec), "recall": float(rec), "f1": float(f1), "balanced_accuracy": float(bal_acc),"loss": float(loss),"test_time": float(test_time),"train_time":float(self.train_time)}
 
     def get_gradients(self):
         parameters = [np.array([self.id])] + [val.cpu().numpy() for _, val in self.m.model.state_dict().items()]
@@ -125,16 +119,14 @@ def main() -> None:
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
 
     #Dataset Loading
-    #full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping  =main_utils.init_datasets(dataset_name, n_clients, id)
     #Modify the init_datasets function in main_utils
     d= main_utils.init_datasets(dataset_name, n_clients, id)
     main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
     
 
     #Model
-    #model = main_utils.get_model(model_type, families,full_train_dataset,model_path)
     #Modify the get_model function in main_utils
-    m = main_utils.get_model(model_type, d.classes, d.trainset)
+    m = main_utils.get_model(model_type, d.classes, d.trainset, model_path=model_path)
 
     #Client
     client = GNNClient(m, d.trainset, d.testset,d.y_test,id,model_type, filename=filename, dirname=dirname)
