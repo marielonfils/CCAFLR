@@ -40,7 +40,7 @@ class Dataset:
     
 
 
-def init_datasets(dataset_name, n_clients, id):
+def init_datasets(dataset_name,datapath,split, n_clients, id):
     # Initialize datasets
     # Arguments:
     #   dataset_name: str, the name of the dataset
@@ -60,24 +60,24 @@ def init_datasets(dataset_name, n_clients, id):
     # 3. call the init_db function with the correct arguments
     if dataset_name=="scdg1": #scdg
         d=Dataset(gc.init_datasets_scdg1)
-        d.init_db(n_clients,id)
+        d.init_db(n_clients,id,datapath,split)
         return d
     
     elif dataset_name == "split_scdg1": #scdg
         d=Dataset(gc.init_datasets_split_scdg1)
-        d.init_db(n_clients, id)
+        d.init_db(n_clients, id, datapath, split)
         return d
     elif dataset_name == "images": #malware images
         d=Dataset(ic.init_datasets_images)
-        d.init_db(n_clients, id)
+        d.init_db(n_clients, id, datapath, split)
         return d
     elif dataset_name =="breast": #breast images
         d = Dataset(bc.init_datasets_breast)
-        d.init_db(n_clients,id)
+        d.init_db(n_clients,id, datapath, split)
         return d
     else: #scdg
         d=Dataset(gc.init_datasets_else)
-        d.init_db(n_clients, id)
+        d.init_db(n_clients, id, datapath,split)
         return d
     
 
@@ -128,6 +128,8 @@ def get_model(model_type,families,full_train_dataset,model_path=None):
     if model_path is not None: #load model
         model = torch.load(model_path,map_location=DEVICE)
         model.eval()
+        m = Model(model, gc.train, gc.test,params)
+        return m
     else: #initialize model
         if model_type == "GINJKFlag":
             model = GINJKFlag(full_train_dataset[0].num_node_features, hidden, num_classes, num_layers, drop_ratio=drop_ratio, residual=residual).to(DEVICE)
@@ -150,7 +152,7 @@ def get_model(model_type,families,full_train_dataset,model_path=None):
 
 #Model class
 class Model:
-    def __init__(self, model, train, test, params,get_model=None):
+    def __init__(self, model, train, test, params={},get_model=None):
         self.model=model #pytorch model
         self.train=train #function for training the model
         self.test=test #function for evaluating the model
