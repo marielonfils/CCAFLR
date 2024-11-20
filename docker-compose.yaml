@@ -5,7 +5,7 @@ services:
     image: ccaflr
     networks:
       - fl
-    entrypoint: [ "bash", "-c", "FL/docker_se.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL}"]
+    entrypoint: [ "bash", "-c", "FL/docker_se.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL} ${ISENC}"]
     volumes:
       - ${FILEPATH}/:/results
       - ${DATABASEPATH}/:/ccaflr/databases
@@ -17,7 +17,7 @@ services:
     deploy:
       mode: replicated
       replicas: ${NCLIENTS}
-    entrypoint: [ "bash", "-c", "FL/docker_cl.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL}"]
+    entrypoint: [ "bash", "-c", "FL/docker_cl.sh ${NCLIENTS} ${NROUNDS} ${DATASET} ${MODEL} ${ISENC}"]
     volumes:
       - ${FILEPATH}/:/results
       - ${DATABASEPATH}/:/ccaflr/databases
