@@ -105,7 +105,7 @@ def get_aggregate_evaluate_fn(model: torch.nn.Module, valset,id,metrics):
 
 def main():
     #Parse command line argument `nclients`
-    n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path = parse_args.parse_arg_server()
+    n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path, datapath, split = parse_args.parse_arg_server()
     dirname=""
     if filename is not None:
         timestr1 = time.strftime("%Y%m%d-%H%M%S")
@@ -121,14 +121,16 @@ def main():
 
     #Dataset Loading
     #Modify the init_datasets function in main_utils
-    d= main_utils.init_datasets(dataset_name, n_clients, id)
+    d= main_utils.init_datasets(dataset_name, datapath, split, n_clients, id)
     main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
 
     #Model
     m = main_utils.get_model(model_type, d.classes, d.trainset, model_path)
     model_parameters = [val.cpu().numpy() for _, val in m.model.state_dict().items()]
     if filename is not None:
-        metrics_utils.write_model(filename1,{"model":m.model.__class__.__name__,"batch_size":m.parameters.batch_size,"hidden":m.parameters.hidden,"num_classes":m.parameters.num_classes,"num_layers":m.parameters.num_layers,"drop_ratio":m.parameters.drop_ratio,"residual":m.parameters.residual,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"ds_path":d.others["ds_path"],"families":d.classes,"mapping":d.others["mapping"],"reversed_mapping":d.others["reversed_mapping"],"full_train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)})
+        dict ={"model":m.model.__class__.__name__,"device":DEVICE,"n_clients":n_clients,"id":id,"nrounds":nrounds,"filename":filename,"classes":d.classes,"train_dataset":len(d.trainset),"test_dataset":len(d.testset),"labels":str(d.y_test)}
+        dict2={**dict,**m.parameters, **d.others}
+        metrics_utils.write_model(filename1,dict2)
         with open(filename2,"w") as f:
           f.write("n_clients: " + str(n_clients) + "\n")
           f.write("nrounds: " + str(nrounds) + "\n")

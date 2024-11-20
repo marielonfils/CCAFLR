@@ -15,6 +15,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.nn import CrossEntropyLoss
 import torch.nn as nn
 import time
+
 class MobileNet(nn.Module):
     def __init__(self, learning_rate,reduce_lr_gamma,num_classes=2):
         super(MobileNet, self).__init__()
@@ -112,25 +113,35 @@ def proc_images(lowerIndex,upperIndex,imagePatches,classZero,classOne):
             return
     return x,y
 
-def init_datasets_breast(nclients,id):
+def init_datasets_breast(nclients,id, datapath, split):
     path="./databases/Breast/archive/IDC_regular_ps50_idx5/**/*.png"
+    if datapath is not None:
+        path=datapath
     imagePatches = glob(path, recursive=True)
     patternZero = '*class0.png'
     patternOne = '*class1.png'
     classZero = fnmatch.filter(imagePatches, patternZero)
     classOne = fnmatch.filter(imagePatches, patternOne)
-    li=id*100
-    ui=(id+1)*100
+    if split: #fragment of dataset
+        if id == nclients: #server
+            li=id*1000
+            ui=li+18000
+        else:
+            li=id*1000
+            ui=(id+1)*1000
+    else: #whole dataset
+        li=0
+        ui=20000
     X,Y = proc_images(li,ui,imagePatches,classZero,classOne)
     X2=np.array(X)
     X3=X2/255.0
 
     X_train, X_test, Y_train, Y_test = train_test_split(X3, Y, test_size=0.3)
     # Reduce Sample Size for DeBugging
-    X_train2 = X_train[0:3000] 
-    Y_train2 = Y_train[0:3000]
-    X_test2 = X_test[0:3000] 
-    Y_test2 = Y_test[0:3000]
+    X_train2 = X_train[0:300000] 
+    Y_train2 = Y_train[0:300000]
+    X_test2 = X_test[0:300000] 
+    Y_test2 = Y_test[0:300000]
 
     X_trainShape = X_train2.shape[1]*X_train2.shape[2]*X_train2.shape[3]
     X_testShape = X_test2.shape[1]*X_test2.shape[2]*X_test2.shape[3]
