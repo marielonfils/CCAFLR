@@ -110,7 +110,7 @@ def preprocess_image2(img_path):
     img = Image.open(img_path).convert('RGB')
     return img
     
-def train(model, dataset, batch, epochs,id,device):
+def train(model, dataset, epochs, batch, id,device):
     dataloader = DataLoader(dataset, batch_size=batch)
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)

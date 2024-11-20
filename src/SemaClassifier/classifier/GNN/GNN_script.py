@@ -212,7 +212,7 @@ def one_epoch_train(model, train_loader, device, optimizer, criterion):
         optimizer.step()
     return loss_all / len(train_loader.dataset)
 
-def train(model, train_dataset, batch_size, epochs, id, device):
+def train(model, train_dataset, epochs, batch_size, id, device):
     t1=time.time()
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
