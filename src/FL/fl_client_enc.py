@@ -180,7 +180,7 @@ class EncClient(fl.client.NumPyClient):
 def main() -> None:
 
     # Parse command line arguments
-    n_clients, id, filename, dataset_name, model_path, model_type = parse_args.parse_arg_client()
+    n_clients, id, filename, dataset_name, model_path, model_type, datapath, split = parse_args.parse_arg_client()
 
     dirname=None
     if filename is not None:
@@ -196,7 +196,7 @@ def main() -> None:
 
     #Dataset Loading
     #Modify the init_datasets function in main_utils
-    d= main_utils.init_datasets(dataset_name, n_clients, id)
+    d= main_utils.init_datasets(dataset_name, datapath, split, n_clients, id)
     main_utils.cprint(f"Client {id} : datasets length, {len(d.trainset)}, {len(d.testset)}",id)
     
 

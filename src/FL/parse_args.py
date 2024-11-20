@@ -32,7 +32,19 @@ def parse_arg_server():
         default = "",
         type=str,
         required=False,
-        help="Specifies the path for the dataset",
+        help="Specifies the name of the dataset",
+    )
+    parser.add_argument(
+        "--datapath",
+        type=str,
+        required=False,
+        default=None,
+        help="Specifies the path for the data"
+    )
+    parser.add_argument(
+        "--split_dataset",
+        action="store_true",
+        help="Specifies if the dataset should be used in its entirety or split into smaller parts",
     )
     parser.add_argument(
         "--noce",
@@ -80,8 +92,10 @@ def parse_arg_server():
     ce=args.noce
     model_type = args.model
     model_path = args.modelpath
+    datapath=args.datapath
+    split=args.split_dataset
 
-    return n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path
+    return n_clients, id, nrounds, dataset_name, methodo, threshold, filename, ce, model_type, model_path, datapath, split
 
 def parse_arg_client():
     # Parse command line argument of client
@@ -116,7 +130,19 @@ def parse_arg_client():
         default = "",
         type=str,
         required=False,
-        help="Specifies the path for the dataset"
+        help="Specifies the name of the dataset"
+    )
+    parser.add_argument(
+        "--datapath",
+        type=str,
+        required=False,
+        default=None,
+        help="Specifies the path for the data"
+    )
+    parser.add_argument(
+        "--split_dataset",
+        action="store_true",
+        help="Specifies if the dataset should be used in its entirety or split into smaller parts",
     )
     parser.add_argument(
         "--modelpath",
@@ -139,8 +165,10 @@ def parse_arg_client():
     dataset_name = args.dataset
     model_path = args.modelpath
     model_type = args.model
+    datapath=args.datapath
+    split=args.split_dataset   
 
-    return n_clients, id, filename, dataset_name, model_path, model_type
+    return n_clients, id, filename, dataset_name, model_path, model_type, datapath, split
 
 def parse_arg_ce():
     parser = argparse.ArgumentParser(description="Flower")
@@ -158,13 +186,25 @@ def parse_arg_ce():
         default = "",
         type=str,
         required=False,
-        help="Specifies the path for the dataset",
+        help="Specifies the name of the dataset",
+    )
+    parser.add_argument(
+        "--split_dataset",
+        action="store_true",
+        help="Specifies if the dataset should be used in its entirety or split into smaller parts",
     )
     parser.add_argument(
         "--filepath",
         type=str,
         required=False,
         help="Specifies the path for storing results"
+    )
+    parser.add_argument(
+        "--datapath",
+        type=str,
+        required=False,
+        default=None,
+        help="Specifies the path for the data"
     )
     parser.add_argument(
         "--enc",
@@ -192,5 +232,7 @@ def parse_arg_ce():
     filename = args.filepath
     model= args.model
     model_path = args.modelpath
+    datapath=args.datapath
+    split=args.split_dataset    
 
-    return n_clients, id, filename,dataset_name,model,model_path,enc
+    return n_clients, id, filename,dataset_name,model,model_path,enc, datapath, split
