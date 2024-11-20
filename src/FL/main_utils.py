@@ -44,6 +44,8 @@ def init_datasets(dataset_name,datapath,split, n_clients, id):
     # Initialize datasets
     # Arguments:
     #   dataset_name: str, the name of the dataset
+    #   datapath: str, the path to the dataset
+    #   split: bool, whether to split the dataset
     #   n_clients: int, the number of clients
     #   id: int, the id of the client
     # Returns a Dataset object
@@ -65,7 +67,7 @@ def init_datasets(dataset_name,datapath,split, n_clients, id):
     
     elif dataset_name == "split_scdg1": #scdg
         d=Dataset(gc.init_datasets_split_scdg1)
-        d.init_db(n_clients, id, datapath, split)
+        d.init_db(n_clients, id, datapath)
         return d
     elif dataset_name == "images": #malware images
         d=Dataset(ic.init_datasets_images)

@@ -86,11 +86,13 @@ def split(path):
         
     return train,train_y, test, test_y, [],[]
 
-def init_datasets_images(n_clients, id):
+def init_datasets_images(n_clients, id, datapath, split=False):
     if n_clients == id:
         path = "./databases/Images/server"
     else:
         path = "./databases/Images/client"+str(id+1)
+    if datapath is not None:
+        path=datapath
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = split(path)
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
     transforms_train = transforms.Compose([transforms.Resize((128, 128)),
@@ -108,7 +110,7 @@ def preprocess_image2(img_path):
     img = Image.open(img_path).convert('RGB')
     return img
     
-def train(model, dataset, batch, epochs,id):
+def train(model, dataset, batch, epochs,id,device):
     dataloader = DataLoader(dataset, batch_size=batch)
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
@@ -136,7 +138,7 @@ def train(model, dataset, batch, epochs,id):
     cprint('--------------------FIT OK----------------',id)
     return model, {'loss':l,'train_time':t}
 
-def test(model,dataset,batch,id):
+def test(model,dataset,batch,id,device):
     dataloader=DataLoader(dataset, batch_size=batch)
     loss_fn= torch.nn.CrossEntropyLoss()
     t=time.time()
