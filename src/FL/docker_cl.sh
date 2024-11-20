@@ -34,6 +34,3 @@ trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM
 echo -e "" >> $filename
 # Wait for all background processes to complete
 wait
-
-
-python FL/fl_client.py --nclients=3 --partition=0 --filepath=results_breast/loop7_60_noenc_84 --model=mobilenet --dataset=breast

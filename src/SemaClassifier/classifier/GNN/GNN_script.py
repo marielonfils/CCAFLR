@@ -6,7 +6,7 @@ import torch.nn.functional as F
 # import torchvision
 # import torchvision.transforms as transforms
 
-
+import gnn_main_script as main_script
 from sklearn.model_selection import train_test_split,StratifiedShuffleSplit
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score,recall_score , f1_score, balanced_accuracy_score
 import matplotlib.pyplot as plt
@@ -67,6 +67,37 @@ default='\033[00m'
 def cprint(text,id):
     print(f'{colours[id%13]} {text}{default}')
     
+def init_datasets_scdg1(n_clients, id):
+    ds_path = "./databases/scdg1"
+    families=os.listdir(ds_path)
+    mapping = read_mapping("./mapping_scdg1.txt")
+    reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    return full_train_dataset, y_full_train, test_dataset, y_test,  families, {"label":label, "fam_idx": fam_idx, "ds_path":ds_path, "mapping":mapping, "reversed_mapping":reversed_mapping} 
+
+def init_datasets_split_scdg1(n_clients, id):
+    families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
+    if n_clients == id:
+        path = "./databases/Images/server"
+    else:
+        path = "./databases/Images/client"+str(id+1)
+    mapping = {}
+    reversed_mapping = {}
+
+    mapping = read_mapping("./mapping_scdg1.txt")
+    reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_split_dataset(mapping, reversed_mapping, n_clients, id)
+    #return full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx, families, ds_path, mapping, reversed_mapping
+    return full_train_dataset, y_full_train, test_dataset, y_test, families, {"label":label, "fam_idx": fam_idx, "ds_path":path, "mapping":mapping, "reversed_mapping":reversed_mapping} 
+
+
+def init_datasets_else(n_clients, id):
+    ds_path = "./databases/examples_samy/BODMAS/01"
+    families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
+    mapping = read_mapping("./mapping.txt")
+    reversed_mapping = read_mapping_inverse("./mapping.txt")
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
+    return full_train_dataset, y_full_train, test_dataset, y_test, families, {"label":label, "fam_idx": fam_idx, "ds_path":ds_path, "mapping":{}, "reversed_mapping":{}} 
 
 def init_dataset(path, families, mapping, fam_idx, fam_dict, BINARY_CLASS):
     if path[-1] != "/":
