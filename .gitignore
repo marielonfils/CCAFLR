@@ -131,7 +131,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+
 .venv
 env/
 venv/
@@ -174,4 +174,3 @@ cython_debug/
 src/databases/Images/*
 src/databases/Breast/archive.zip
 src/databases/Breast/archive/*
-
