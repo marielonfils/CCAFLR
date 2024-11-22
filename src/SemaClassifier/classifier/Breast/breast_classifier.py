@@ -15,6 +15,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.nn import CrossEntropyLoss
 import torch.nn as nn
 import time
+
 class MobileNet(nn.Module):
     def __init__(self, learning_rate,reduce_lr_gamma,num_classes=2):
         super(MobileNet, self).__init__()

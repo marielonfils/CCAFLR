@@ -67,20 +67,24 @@ default='\033[00m'
 def cprint(text,id):
     print(f'{colours[id%13]} {text}{default}')
     
-def init_datasets_scdg1(n_clients, id):
+def init_datasets_scdg1(n_clients, id, datapath):
     ds_path = "./databases/scdg1"
+    if datapath is not None:
+        ds_path=datapath
     families=os.listdir(ds_path)
     mapping = read_mapping("./mapping_scdg1.txt")
     reversed_mapping = read_mapping_inverse("./mapping_scdg1.txt")
     full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = main_script.init_all_datasets(ds_path, families, mapping, reversed_mapping, n_clients, id)
     return full_train_dataset, y_full_train, test_dataset, y_test,  families, {"label":label, "fam_idx": fam_idx, "ds_path":ds_path, "mapping":mapping, "reversed_mapping":reversed_mapping} 
 
-def init_datasets_split_scdg1(n_clients, id):
+def init_datasets_split_scdg1(n_clients, id, datapath):
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12] #13 families in scdg1
     if n_clients == id:
         path = "./databases/Images/server"
     else:
         path = "./databases/Images/client"+str(id+1)
+    if datapath is not None:
+        path=datapath
     mapping = {}
     reversed_mapping = {}
 
@@ -208,7 +212,7 @@ def one_epoch_train(model, train_loader, device, optimizer, criterion):
         optimizer.step()
     return loss_all / len(train_loader.dataset)
 
-def train(model, train_dataset, batch_size, epochs, device, id):
+def train(model, train_dataset, epochs, batch_size, id, device):
     t1=time.time()
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
@@ -228,7 +232,7 @@ def train(model, train_dataset, batch_size, epochs, device, id):
     
     return model, {'loss': loss,"train_time":t}
 
-def test(model, test_dataset, batch_size, device,id):
+def test(model, test_dataset, batch_size, id, device):
     t0=time.time()
     model.eval()
     correct, loss_all = 0, 0.0
