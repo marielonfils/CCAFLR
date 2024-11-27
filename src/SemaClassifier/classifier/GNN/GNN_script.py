@@ -95,8 +95,10 @@ def init_datasets_split_scdg1(n_clients, id, datapath):
     return full_train_dataset, y_full_train, test_dataset, y_test, families, {"label":label, "fam_idx": fam_idx, "ds_path":path, "mapping":mapping, "reversed_mapping":reversed_mapping} 
 
 
-def init_datasets_else(n_clients, id):
+def init_datasets_else(n_clients, id, datapath, split):
     ds_path = "./databases/examples_samy/BODMAS/01"
+    if datapath is not None:
+        ds_path=datapath
     families=["berbew","sillyp2p","benjamin","small","mira","upatre","wabot"]
     mapping = read_mapping("./mapping.txt")
     reversed_mapping = read_mapping_inverse("./mapping.txt")

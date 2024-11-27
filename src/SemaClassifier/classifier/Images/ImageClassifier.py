@@ -64,7 +64,7 @@ class ConvNet(nn.Module):
             nn.AdaptiveAvgPool2d((1, 1)))
 
 
-def split(path):
+def split_data(path):
     labels=np.loadtxt(path+"/labels.csv",delimiter=",",dtype=str)
     sss=StratifiedShuffleSplit(n_splits=1, test_size=0.4, random_state=4)
     l=len(labels)
@@ -93,7 +93,7 @@ def init_datasets_images(n_clients, id, datapath, split=False):
         path = "./databases/Images/client"+str(id+1)
     if datapath is not None:
         path=datapath
-    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = split(path)
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = split_data(path)
     families=[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
     transforms_train = transforms.Compose([transforms.Resize((128, 128)),
                                     transforms.RandomRotation(10.),

@@ -19,7 +19,11 @@ import time
 class MobileNet(nn.Module):
     def __init__(self, learning_rate,reduce_lr_gamma,num_classes=2):
         super(MobileNet, self).__init__()
-        self.layers = mobilenet_v2(pretrained=True,)
+        #self.layers = mobilenet_v2(pretrained=True,)
+        self.layers=mobilenet_v2()
+        self.layers.load_state_dict(torch.load("mobilenet.pt", weights_only=True))
+        self.layers.eval()
+
         self.layers.classifier[1] = torch.nn.Linear(in_features=self.layers.classifier[1].in_features, out_features=num_classes)
         self.optimizer = optim.Adadelta(self.layers.parameters(), lr=learning_rate)
         self.scheduler = StepLR(self.optimizer, step_size=1, gamma=reduce_lr_gamma)

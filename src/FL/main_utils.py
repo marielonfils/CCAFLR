@@ -13,7 +13,7 @@ from SemaClassifier.classifier.GNN.utils import read_mapping, read_mapping_inver
 from SemaClassifier.classifier.GNN.models.GINJKFlagClassifier import GINJKFlag
 from SemaClassifier.classifier.GNN.models.GINEClassifier import GINE
 from SemaClassifier.classifier.Breast.breast_classifier import MobileNet
-from SemaClassifier.classifier.Images.ImageClassifier import split,ConvNet,ImagesDataset
+from SemaClassifier.classifier.Images.ImageClassifier import split_data,ConvNet,ImagesDataset
 import torch
 
 
@@ -62,7 +62,7 @@ def init_datasets(dataset_name,datapath,split, n_clients, id):
     # 3. call the init_db function with the correct arguments
     if dataset_name=="scdg1": #scdg
         d=Dataset(gc.init_datasets_scdg1)
-        d.init_db(n_clients,id,datapath,split)
+        d.init_db(n_clients,id,datapath)
         return d
     
     elif dataset_name == "split_scdg1": #scdg
