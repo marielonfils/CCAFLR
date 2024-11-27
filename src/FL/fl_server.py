@@ -66,7 +66,7 @@ def get_evaluate_fn(m, valset,id,y_test,dirname):
             torch.save(m.model,f"{dirname}/model_server_{server_round}.pt")
         
         #test_time, loss, y_pred  = GNN_script.test(model, valset, 32, DEVICE,id)
-        test_time, loss, y_pred =m.test(m.model,valset, 16, id)
+        test_time, loss, y_pred =m.test(m.model,valset, 16, id,DEVICE)
         acc, prec, rec, f1, bal_acc = metrics_utils.compute_metrics(y_test, y_pred)
         #metrics_utils.write_to_csv([str(model.__class__.__name__),acc, prec, rec, f1, bal_acc, loss, 0, 0,0,0], filename)
         main_utils.cprint(f"Client {id}: Evaluation accuracy & loss, {loss}, {acc}, {prec}, {rec}, {f1}, {bal_acc}", id)
