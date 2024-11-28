@@ -21,7 +21,7 @@ class MobileNet(nn.Module):
         super(MobileNet, self).__init__()
         #self.layers = mobilenet_v2(pretrained=True,)
         self.layers=mobilenet_v2()
-        self.layers.load_state_dict(torch.load("mobilenet.pt", weights_only=True))
+        self.layers.load_state_dict(torch.load("./SemaClassifier/classifier/Breast/mobilenet.pt", weights_only=True))
         self.layers.eval()
 
         self.layers.classifier[1] = torch.nn.Linear(in_features=self.layers.classifier[1].in_features, out_features=num_classes)

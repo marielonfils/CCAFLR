@@ -105,6 +105,25 @@ def init_datasets_images(n_clients, id, datapath, split=False):
     test_dataset=ImagesDataset(test_dataset,y_test,transform=transforms_test)
     return full_train_dataset, y_full_train, test_dataset, y_test,  families, {"label":label, "fam_idx": fam_idx, "ds_path":path, "mapping":{}, "reversed_mapping":{}} 
 
+def init_datasets_example(n_clients, id, datapath, split=False):
+    if n_clients == id:
+        path = "./databases/example_images/server"
+    else:
+        path = "./databases/example_images/client"+str(id+1)
+    if datapath is not None:
+        path=datapath
+    full_train_dataset, y_full_train, test_dataset, y_test, label, fam_idx = split_data(path)
+    families=[0,1,2,3,4,5]
+    transforms_train = transforms.Compose([transforms.Resize((128, 128)),
+                                    transforms.RandomRotation(10.),
+                                    transforms.ToTensor()])
+
+    transforms_test = transforms.Compose([transforms.Resize((128, 128)),
+                                        transforms.ToTensor()])
+    full_train_dataset=ImagesDataset(full_train_dataset,y_full_train,transforms_train)
+    test_dataset=ImagesDataset(test_dataset,y_test,transform=transforms_test)
+    return full_train_dataset, y_full_train, test_dataset, y_test,  families, {"label":label, "fam_idx": fam_idx, "ds_path":path, "mapping":{}, "reversed_mapping":{}} 
+
 
 def preprocess_image2(img_path):
     img = Image.open(img_path).convert('RGB')
