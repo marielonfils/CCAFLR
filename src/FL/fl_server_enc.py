@@ -131,7 +131,7 @@ def main():
         dirname=f"{filename}/{timestr2}/parms_{id}/"
         filename = f"{filename}/{timestr2}/server{id}_{timestr1}.csv"
     print("FFFNNN",filename)
-    if not os.path.isdir(dirname):
+    if dirname is not None and not os.path.isdir(dirname):
         os.makedirs(os.path.dirname(dirname), exist_ok=True)
     
     #Dataset Loading

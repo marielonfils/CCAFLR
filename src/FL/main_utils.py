@@ -77,10 +77,16 @@ def init_datasets(dataset_name,datapath,split, n_clients, id):
         d = Dataset(bc.init_datasets_breast)
         d.init_db(n_clients,id, datapath, split)
         return d
-    else: #scdg
+    elif dataset_name == "example_samy": #scdg
         d=Dataset(gc.init_datasets_else)
         d.init_db(n_clients, id, datapath,split)
         return d
+    elif dataset_name == "example_images": #scdg
+        d=Dataset(gc.init_datasets_else)
+        d.init_db(n_clients, id, datapath,split)
+        return d
+    else:
+        raise ValueError("Unknown dataset name")
     
 
 
