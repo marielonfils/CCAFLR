@@ -5,14 +5,19 @@ FILEPATH="/results"
 DATASET=$3
 MODEL=$4
 ISENC=$5
-SERVERIP=$6
+SERVERIP=$7
+PART=$6
 filename="/results/xp.txt"
 filepre="xp_101_"
 fileext=".txt"
 
 #if docker on the same machine
 # script to find and replace server IP and outputs number of the current client
-PART=$(python ./FL/docker_compose_cl.py $SERVERIP)
+if [ $# -eq 5 ]; then
+   PART=$(python ./FL/docker_compose_cl.py $ISENC)
+else
+  python ./FL/docker_cl.py $SERVERIP $ISENC
+fi
 
 echo "Starting client ${PART}"
 

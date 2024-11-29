@@ -5,14 +5,19 @@ FILEPATH="/results"
 DATASET=$3
 MODEL=$4
 ISENC=$5
+SIP=$6
 filename="/results/xp.txt"
 filepre="xp_101_"
 fileext=".txt"
 
 echo "Starting server $j"
 
-
-python ./FL/docker_compose_se.py
+if [ $# -eq 5 ]; then
+   python ./FL/docker_compose_se.py
+else
+   echo "IP.3 = $SIP" >> FL/certificates/certificate_docker.conf
+   FL/certificates/generate_srv.sh
+fi
 
 current_date_time="`date +%Y%m%d-%H%M%S` "
 f="${FILEPATH}/${filepre}${NROUNDS}_se${fileext}"
