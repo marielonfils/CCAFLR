@@ -104,6 +104,7 @@ In the *init_datasets* function of *src/FL/main_utils*:
 - create a Dataset object and provide it an initialization function
 - call init_db on the new Dataset and return it
 
+
 ### Modify the model used
 
 In the *get_model* function of *src/FL/main_utils*:
