@@ -23,14 +23,14 @@ echo "Starting client ${PART}"
 
 current_date_time="`date +%Y%m%d-%H%M%S` "
 f="${FILEPATH}/${filepre}${NROUNDS}_cl${PART}${fileext}"
-echo -n $current_date_time > $f
-echo $f
-sleep 60
+#echo -n $current_date_time > $f
+#sleep 60
 if [[ "$ISENC" == "true" ]]; then
-    python ./FL/fl_client_enc.py --nclients=${NCLIENTS} --partition=${PART} --filepath=${FILEPATH} --dataset=${DATASET} --model=${MODEL}| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f
+    python ./FL/fl_client_enc.py --nclients=${NCLIENTS} --partition=${PART} --filepath=${FILEPATH} --dataset=${DATASET} --model=${MODEL} #| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f
 else
-    python ./FL/fl_client.py --nclients=${NCLIENTS} --partition=${PART} --filepath=${FILEPATH} --dataset=${DATASET} --model=${MODEL}| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f
+    python ./FL/fl_client.py --nclients=${NCLIENTS} --partition=${PART} --filepath=${FILEPATH} --dataset=${DATASET} --model=${MODEL} #| awk -F"FFFNNN" 'BEGIN { ORS=" " }; !/^$/{print $2}' >> $f
 fi
+pid=($!)
 wait $pid
 echo -e "" >> $f
 
