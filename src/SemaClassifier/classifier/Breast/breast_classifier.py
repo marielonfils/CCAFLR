@@ -6,6 +6,7 @@ import fnmatch
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, StratifiedKFold, learning_curve, GridSearchCV
 from sklearn.metrics import confusion_matrix, make_scorer, accuracy_score
+from sklearn.model_selection import train_test_split,StratifiedShuffleSplit
 from torch.utils.data import Dataset, DataLoader
 from torchvision.models.mobilenet import mobilenet_v2
 import torch
@@ -96,7 +97,7 @@ def get_model():
     model.to(device)
     return model.layers
 
-def proc_images(lowerIndex,upperIndex,imagePatches,classZero,classOne):
+def proc_images(imagePatches,labels):
     """
     Returns two arrays: 
         x is an array of resized images
@@ -106,41 +107,64 @@ def proc_images(lowerIndex,upperIndex,imagePatches,classZero,classOne):
     y = []
     WIDTH = 50
     HEIGHT = 50
-    for img in imagePatches[lowerIndex:upperIndex]:
+    #for ind in indices:
+    ind=0
+    for img in imagePatches: #[lowerIndex:upperIndex]:
+        #img = imagePatches[ind]
         full_size_image = cv2.imread(img)
         x.append(cv2.resize(full_size_image, (WIDTH,HEIGHT), interpolation=cv2.INTER_CUBIC))
-        if img in classZero:
+        if labels[ind] == 0:
             y.append(0)
-        elif img in classOne:
-            y.append(1)
         else:
-            return
+            y.append(1)
+        ind+=1
+        
     return x,y
 
 def init_datasets_breast(nclients,id, datapath, split):
-    path="./databases/Breast/archive/IDC_regular_ps50_idx5/**/*.png"
+    #path="./databases/Breast/archive/IDC_regular_ps50_idx5/**/*.png"
+    path=f"./databases/Breast/archive/client{id+1}/**/*.png" #/*.png"
+    if nclients==id:
+        path="./databases/Breast/archive/server/**/*.png" #*.png"
+    
     if datapath is not None:
         path=datapath
+    #imagePatches_train = glob(path+"train/*.png", recursive=True)
+    #imagePatches_test = glob(path+"test/*.png", recursive=True)
     imagePatches = glob(path, recursive=True)
+    print(path)
+    
     patternZero = '*class0.png'
     patternOne = '*class1.png'
-    classZero = fnmatch.filter(imagePatches, patternZero)
-    classOne = fnmatch.filter(imagePatches, patternOne)
-    if split: #fragment of dataset
-        if id == nclients: #server
-            li=id*1000
-            ui=li+18000
+    #classZero = fnmatch.filter(imagePatches, patternZero)
+    #classOne = fnmatch.filter(imagePatches, patternOne)
+    #labels_train=[]
+    #labels_test=[]
+    labels=[]
+    for img in imagePatches:
+        if fnmatch.fnmatch(img, patternZero):
+            labels.append(0)
+        elif fnmatch.fnmatch(img, patternOne):
+            labels.append(1)
         else:
-            li=id*1000
-            ui=(id+1)*1000
-    else: #whole dataset
-        li=0
-        ui=20000
-    X,Y = proc_images(li,ui,imagePatches,classZero,classOne)
+            raise ValueError("Invalid image label")
+    #for img in imagePatches_test:
+    #    if fnmatch.fnmatch(img, patternZero):
+    #        labels_test.append(0)
+    #    elif fnmatch.fnmatch(img, patternOne):
+    #        labels_test.append(1)
+    #    else:
+    #        print("!!!!!", img)
+    #        raise ValueError("Invalid image label")
+        
+    X,Y = proc_images(imagePatches,labels)#imagePatches_train,labels_train)
+    #X_test,Y_test = proc_images(imagePatches_test,labels_test)
     X2=np.array(X)
     X3=X2/255.0
+    #X4=np.array(X_test)
+    #X5=X4/255.0
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X3, Y, test_size=0.3)
+    X_train, X_test, Y_train, Y_test = train_test_split(X3, Y, test_size=0.3, random_state=4)
     # Reduce Sample Size for DeBugging
     X_train2 = X_train[0:300000] 
     Y_train2 = Y_train[0:300000]

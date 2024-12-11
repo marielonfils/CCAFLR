@@ -175,5 +175,6 @@ cython_debug/
 src/databases/Images/*
 src/databases/Breast/archive.zip
 src/databases/Breast/archive/*
+src/databases/Breast/archive2/*
 src/databases/example_images/*
 

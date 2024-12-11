@@ -1,8 +1,12 @@
-# CCAFLR - Centralized Coalitional Active Federated Learning with Reputation
+<!---# CCAFLR - Centralized Coalitional Active Federated Learning with Reputation --->
+# MKFL: practical tool for Secure Federated Learning
 
-The goal of this project is to implement a secure federated learning framework that combines coalitional federated learning, active learning and reputation evaluation, to be able to deal respectively with curious servers and clients, non balanced datasets, wrong labelling and malicious clients.
+MKFL is a privacy-preserving federated learning tool based on the xMK-CKKS encryp
+tion scheme.
 
-For the moment, this repository implements a **secure** federated learning framework. 
+<!---The goal of this project is to implement a secure federated learning framework that combines coalitional federated learning, active learning and reputation evaluation, to be able to deal respectively with curious servers and clients, non balanced datasets, wrong labelling and malicious clients.
+
+For the moment, this repository implements a **secure** federated learning framework.  --->
 <!--- with **contribution evaluation**.--->
 - *Client data security* is provided by the [xMK-CKKS homomorphic multi-key encryption scheme](https://arxiv.org/abs/2104.06824) \[1\]. The parameters communicated between the clients and the server are encrypted using the aggregated public key and can only be decrypted by the collaboration of all clients.
 <!---- *[Contribution evaluation](https://onlinelibrary.wiley.com/doi/full/10.1002/aaai.12082)* \[2\] is realized by a trusted server computing the *Shapley value* \[3\] of each client update. We implemented three client elimination methodologies based on it :
@@ -15,11 +19,12 @@ For the moment, this repository implements a **secure** federated learning frame
 - [Installation](#installation)
 - [Usage](#usage)
 - [Docker](#docker)
+- [Examples](#examples)
 
 
 ## Installation
 Works with **Python 3.10.12**.
-1. Clone the repository:
+<!---1. Clone the repository:
 ```bash
  git clone git@github.com:marielonfils/CCAFLR.git
 ```
@@ -30,16 +35,30 @@ cd flower
 pip install .
 git clone git@github.com:marielonfils/TenSEAL.git
 cd TenSEAL
-pip install.
+pip install. 
+``` --->
+
+
+1. Install the dependencies repositories and install them:
+
+Download *flower* from https://anonymous.4open.science/r/flower-4103/README.md. 
+```bash
+cd flower
+pip install .
 ```
+Download *TenSEAL* from https://anonymous.4open.science/r/TenSEAL-8F2A/README.md.
+```bash
+cd TenSEAL
+pip install .
+```
+
 
 2. Install dependencies:
 ```bash
- pip install -r requirements.txt 
- ```
- or 
-```bash
- pip install -r requirements.txt -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+ cd CCAFLR
+ pip install -r requirements.txt
+ pip install pyg_lib torch_geometric torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+ pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cpu
  ```
  
 ## Usage
@@ -112,6 +131,13 @@ Latest execution logs can be checked with
 ```bash
 docker compose logs
 ```
+
+## Examples
+Example datasets are provided in *src/databases*.
+
+The first one is the directory *examples_samy*. It contains graphical representation of malware. The dataset to give as parameter is *example_samy* and the model is *GINE*.
+
+The second dataset is *example_images.zip*. It contains image representations of malware. It should first be unzipped in a folder of the same name. The dataset to give as parameter is *example_images* and the model is *images*.
 
 
 ## References
